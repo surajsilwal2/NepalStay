@@ -1,0 +1,22 @@
+{
+  "name": "NepalStay — Book Hotels Across Nepal",
+  "short_name": "NepalStay",
+  "description": "Nepal's dedicated hotel booking portal. Khalti payments, BS calendar, FNMIS compliant.",
+  "start_url": "/hotels",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#f59e0b",
+  "lang": "en",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Browse Hotels", "url": "/hotels",           "description": "Search hotels across Nepal" },
+    { "name": "My Bookings",   "url": "/customer/bookings","description": "View your reservations" },
+    { "name": "Wishlist",      "url": "/customer/wishlist", "description": "Your saved hotels" }
+  ]
+}

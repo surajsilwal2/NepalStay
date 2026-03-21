@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  body { @apply text-slate-800 antialiased; }
+}
+
+@layer utilities {
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+}
+
+/* Toast slide-in animation */
+@keyframes toastEnter {
+  from { transform: translateX(calc(100% + 1.25rem)); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+.toast-enter { animation: toastEnter 0.2s ease-out forwards; }
+
+/* Leaflet map fix — prevent Next.js from breaking icons */
+.leaflet-default-icon-path { background-image: url(/leaflet/marker-icon.png); }

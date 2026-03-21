@@ -1,0 +1,326 @@
+// NepalStay — Online Hotel Booking Portal
+// BSc CSIT 7th Semester Project
+// Tribhuvan University · Bhairahawa Multiple Campus
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  CUSTOMER
+  VENDOR
+  STAFF
+  ADMIN
+}
+
+enum HotelStatus {
+  PENDING    // awaiting admin approval
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum RoomType {
+  SINGLE
+  DOUBLE
+  TWIN
+  DELUXE
+  SUITE
+  PENTHOUSE
+  DORMITORY
+}
+
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  CLEANING
+  MAINTENANCE
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentMethod {
+  KHALTI
+  CASH
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum RefundStatus {
+  NONE
+  PENDING
+  COMPLETED
+  NOT_ELIGIBLE
+}
+
+// ─── User ────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(CUSTOMER)
+  phone     String?
+  avatar    String?
+  address   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  hotel          Hotel?          // if VENDOR, their hotel
+  staffHotelId   String?         // if STAFF, which hotel they work at
+  staffHotel     Hotel?          @relation("HotelStaff", fields: [staffHotelId], references: [id])
+  bookings       Booking[]
+  reviews        Review[]
+  wishlist       WishlistItem[]
+  roomStatusLogs RoomStatusLog[]
+
+  @@index([email])
+  @@index([role])
+}
+
+// ─── Hotel ───────────────────────────────────────────────────────────────────
+
+model Hotel {
+  id          String      @id @default(cuid())
+  vendorId    String      @unique
+  vendor      User        @relation(fields: [vendorId], references: [id])
+
+  name        String
+  slug        String      @unique  // URL-friendly: "hotel-himalaya-pokhara"
+  description String
+  status      HotelStatus @default(PENDING)
+
+  // Location
+  city        String      // "Pokhara", "Kathmandu", "Chitwan", "Nagarkot"
+  address     String
+  latitude    Float?      // For Leaflet map pin
+  longitude   Float?
+
+  // Details
+  starRating  Int         @default(3)   // 1–5
+  propertyType String     @default("Hotel") // Hotel, Guesthouse, Resort, Hostel, Lodge
+  amenities   String[]    // ["WiFi", "Parking", "Restaurant", "Pool", ...]
+  images      String[]    // UploadThing URLs
+  policies    Json?       // { checkIn: "14:00", checkOut: "11:00", cancellation: "..." }
+
+  // Contact
+  contactPhone String?
+  contactEmail String?
+  website      String?
+
+  // Admin
+  approvedAt  DateTime?
+  approvedBy  String?    // Admin userId
+  rejectionReason String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  rooms       Room[]
+  bookings    Booking[]
+  reviews     Review[]
+  staff       User[]    @relation("HotelStaff")
+  wishlist    WishlistItem[]
+
+  @@index([city])
+  @@index([status])
+  @@index([starRating])
+  @@index([slug])
+}
+
+// ─── Room ────────────────────────────────────────────────────────────────────
+
+model Room {
+  id            String     @id @default(cuid())
+  hotelId       String
+  hotel         Hotel      @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  name          String     // "Deluxe Mountain View", "Standard Twin"
+  type          RoomType
+  status        RoomStatus @default(AVAILABLE)
+  pricePerNight Float
+  capacity      Int        @default(2)
+  floor         Int        @default(1)
+  totalRooms    Int        @default(1) // physical rooms of this type
+  description   String?
+  amenities     String[]
+  images        String[]
+  isActive      Boolean    @default(true)
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  bookings      Booking[]
+  roomStatusLogs RoomStatusLog[]
+
+  @@index([hotelId])
+  @@index([status])
+  @@index([type])
+}
+
+// ─── Booking ─────────────────────────────────────────────────────────────────
+
+model Booking {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id])
+  hotelId   String
+  hotel     Hotel         @relation(fields: [hotelId], references: [id])
+  roomId    String
+  room      Room          @relation(fields: [roomId], references: [id])
+
+  checkIn   DateTime
+  checkOut  DateTime
+  nights    Int
+  adults    Int           @default(1)
+  children  Int           @default(0)
+  notes     String?
+  status    BookingStatus @default(PENDING)
+  totalPrice Float
+
+  // Payment
+  paymentMethod  PaymentMethod  @default(CASH)
+  paymentStatus  PaymentStatus  @default(UNPAID)
+  khaltiPidx     String?
+  khaltiTransactionId String?
+  paidAt         DateTime?
+  invoiceNumber  String?  @unique
+  invoiceIssuedAt DateTime?
+
+  // Refund
+  refundStatus   RefundStatus @default(NONE)
+  refundAmount   Float?
+  refundPercent  Int?
+  refundedAt     DateTime?
+  creditNoteRef  String?
+
+  // FNMIS — foreign guest compliance
+  guestNationality  String?
+  passportNumber    String?
+  purposeOfVisit    String?
+  fnmisDeadline     DateTime?
+  fnmisReported     Boolean  @default(false)
+  fnmisReportedAt   DateTime?
+  fnmisOverdue      Boolean  @default(false)
+  fnmisAutoReported Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creditNote CreditNote?
+
+  @@index([userId])
+  @@index([hotelId])
+  @@index([roomId])
+  @@index([status])
+  @@index([checkIn, checkOut])
+  @@index([invoiceNumber])
+}
+
+// ─── Credit Note ─────────────────────────────────────────────────────────────
+
+model CreditNote {
+  id               String   @id @default(cuid())
+  creditNoteNumber String   @unique
+  bookingId        String   @unique
+  booking          Booking  @relation(fields: [bookingId], references: [id])
+  originalInvoice  String
+  guestName        String
+  guestEmail       String
+  hotelName        String
+  roomName         String
+  originalAmount   Float
+  refundAmount     Float
+  refundPercent    Int
+  reason           String
+  cancellationPolicy String
+  issuedAt         DateTime @default(now())
+  issuedBy         String?
+  notes            String?
+
+  @@index([bookingId])
+  @@index([issuedAt])
+}
+
+// ─── Review ───────────────────────────────────────────────────────────────────
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  hotelId   String
+  hotel     Hotel    @relation(fields: [hotelId], references: [id])
+
+  // Can only review after CHECKED_OUT — enforced at API level
+  bookingId String   @unique // one review per booking
+
+  // Score breakdown (1–5 each)
+  overallScore    Float  // computed average
+  cleanlinessScore Int
+  staffScore       Int
+  locationScore    Int
+  valueScore       Int
+  facilitiesScore  Int
+
+  title   String?
+  body    String
+  isVisible Boolean @default(true) // admin can hide
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([hotelId])
+  @@index([userId])
+}
+
+// ─── Wishlist ─────────────────────────────────────────────────────────────────
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  hotelId   String
+  hotel     Hotel    @relation(fields: [hotelId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, hotelId])
+  @@index([userId])
+}
+
+// ─── Room Status Log ──────────────────────────────────────────────────────────
+
+model RoomStatusLog {
+  id        String     @id @default(cuid())
+  roomId    String
+  room      Room       @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  updatedBy String
+  user      User       @relation(fields: [updatedBy], references: [id])
+  status    RoomStatus
+  notes     String?
+  createdAt DateTime   @default(now())
+
+  @@index([roomId])
+}
