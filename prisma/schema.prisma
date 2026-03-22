@@ -57,6 +57,7 @@ enum BookingStatus {
 enum PaymentMethod {
   KHALTI
   CASH
+  STRIPE
 }
 
 enum PaymentStatus {
@@ -194,6 +195,7 @@ model Booking {
   room      Room          @relation(fields: [roomId], references: [id])
 
   checkIn   DateTime
+  stripeSessionId String?
   checkOut  DateTime
   nights    Int
   adults    Int           @default(1)

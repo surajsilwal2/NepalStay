@@ -12,7 +12,7 @@ async function main() {
   // ── Users ─────────────────────────────────────────────────────────────────
   const admin = await prisma.user.upsert({
     where: { email: "admin@nepalstay.com" },
-    update: {},
+    update: { password: adminPassword },
     create: {
       name: "Admin User",
       email: "admin@nepalstay.com",
@@ -24,7 +24,7 @@ async function main() {
 
   const vendor1 = await prisma.user.upsert({
     where: { email: "vendor1@nepalstay.com" },
-    update: {},
+    update: { password: hashedPassword },
     create: {
       name: "Raj Shrestha",
       email: "vendor1@nepalstay.com",
@@ -36,7 +36,7 @@ async function main() {
 
   const vendor2 = await prisma.user.upsert({
     where: { email: "vendor2@nepalstay.com" },
-    update: {},
+    update: { password: hashedPassword },
     create: {
       name: "Sita Gurung",
       email: "vendor2@nepalstay.com",
@@ -49,7 +49,7 @@ async function main() {
   // One hotel per vendor — schema has @@unique on vendorId
   const vendor3 = await prisma.user.upsert({
     where: { email: "vendor3@nepalstay.com" },
-    update: {},
+    update: { password: hashedPassword },
     create: {
       name: "Binod Thapa",
       email: "vendor3@nepalstay.com",
@@ -61,7 +61,7 @@ async function main() {
 
   const staff1 = await prisma.user.upsert({
     where: { email: "staff@nepalstay.com" },
-    update: {},
+    update: { password: hashedPassword },
     create: {
       name: "Ram Tamang",
       email: "staff@nepalstay.com",
@@ -73,7 +73,7 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: "customer@nepalstay.com" },
-    update: {},
+    update: { password: hashedPassword },
     create: {
       name: "Priya Maharjan",
       email: "customer@nepalstay.com",
