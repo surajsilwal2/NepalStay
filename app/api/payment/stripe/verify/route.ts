@@ -5,7 +5,6 @@ import prisma from "@/lib/prisma";
 import Stripe from "stripe";
 import { generateInvoiceNumber } from "@/lib/booking";
 
-// Same version as initiation route
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-02-25.clover",
 });
@@ -21,16 +20,20 @@ export async function POST(req: NextRequest) {
     }
 
     const { sessionId, bookingId } = await req.json();
+
     if (!sessionId || !bookingId) {
       return NextResponse.json(
-        { success: false, error: "sessionId and bookingId required" },
+        { success: false, error: "sessionId and bookingId are required" },
         { status: 400 },
       );
     }
 
+    // ── Idempotency check ───────────────────────────────────────────────────
+    // If booking is already paid, return existing invoice — do not call Stripe again
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
     });
+
     if (!booking) {
       return NextResponse.json(
         { success: false, error: "Booking not found" },
@@ -38,35 +41,52 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Idempotency — already verified
     if (booking.paidAt && booking.invoiceNumber) {
       return NextResponse.json({
         success: true,
-        data: { invoiceNumber: booking.invoiceNumber, alreadyVerified: true },
-        message: `Already verified. Invoice ${booking.invoiceNumber}.`,
+        data: {
+          invoiceNumber: booking.invoiceNumber,
+          alreadyVerified: true,
+        },
+        message: `Already confirmed. Invoice ${booking.invoiceNumber}.`,
       });
     }
 
-    const stripeSession = await stripe.checkout.sessions.retrieve(sessionId);
+    // ── Verify with Stripe ──────────────────────────────────────────────────
+    let stripeSession: Stripe.Checkout.Session;
+    try {
+      stripeSession = await stripe.checkout.sessions.retrieve(sessionId);
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Could not retrieve session from Stripe. Please check your bookings.",
+        },
+        { status: 502 },
+      );
+    }
 
+    // Payment must be completed on Stripe side
     if (stripeSession.payment_status !== "paid") {
       return NextResponse.json(
         {
           success: false,
-          error: `Payment not completed. Stripe status: ${stripeSession.payment_status}`,
+          error: `Payment not completed. Status from Stripe: ${stripeSession.payment_status}`,
         },
         { status: 400 },
       );
     }
 
-    // Confirm the bookingId in metadata matches — prevents spoofing
+    // Metadata bookingId must match — prevents one user verifying another's payment
     if (stripeSession.metadata?.bookingId !== bookingId) {
       return NextResponse.json(
-        { success: false, error: "Booking ID mismatch" },
+        { success: false, error: "Booking ID does not match payment session." },
         { status: 400 },
       );
     }
 
+    // ── Update booking — single source of truth ─────────────────────────────
     const invoiceNumber = generateInvoiceNumber(bookingId, booking.totalPrice);
 
     await prisma.booking.update({
@@ -74,7 +94,7 @@ export async function POST(req: NextRequest) {
       data: {
         status: "CONFIRMED",
         paymentStatus: "PAID",
-        paymentMethod: "STRIPE", // ← now valid after enum fix
+        paymentMethod: "STRIPE",
         invoiceNumber,
         invoiceIssuedAt: new Date(),
         paidAt: new Date(),
@@ -85,12 +105,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       data: { invoiceNumber },
-      message: `Payment verified. Invoice ${invoiceNumber} issued.`,
+      message: `Payment confirmed. Invoice ${invoiceNumber} issued.`,
     });
   } catch (error) {
     console.error("[STRIPE_VERIFY]", error);
     return NextResponse.json(
-      { success: false, error: "Verification failed" },
+      { success: false, error: "Verification failed. Please contact support." },
       { status: 500 },
     );
   }
