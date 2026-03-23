@@ -71,8 +71,11 @@ export async function POST(req: NextRequest) {
 
     const appUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
     const amountPaisa = Math.round(booking.totalPrice * 100);
-    const isTest = process.env.KHALTI_SECRET_KEY.startsWith("test_");
-    const khaltiBase = isTest ? "https://a.khalti.com" : "https://khalti.com";
+    // NEW — explicit env variable controls which URL to use
+    const khaltiBase =
+      process.env.NODE_ENV === "production"
+        ? "https://khalti.com"
+        : "https://a.khalti.com";
 
     const payload = {
       return_url: `${appUrl}/payment/success?bookingId=${booking.id}`,

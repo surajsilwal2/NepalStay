@@ -7,48 +7,86 @@ import { generateInvoiceNumber } from "@/lib/booking";
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    if (!session)
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 },
+      );
 
     const { pidx, bookingId } = await req.json();
     if (!pidx || !bookingId) {
-      return NextResponse.json({ success: false, error: "pidx and bookingId are required" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "pidx and bookingId are required" },
+        { status: 400 },
+      );
     }
 
-    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
-    if (!booking) return NextResponse.json({ success: false, error: "Booking not found" }, { status: 404 });
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+    });
+    if (!booking)
+      return NextResponse.json(
+        { success: false, error: "Booking not found" },
+        { status: 404 },
+      );
 
     // Idempotency — already verified
     if (booking.paidAt && booking.invoiceNumber) {
       return NextResponse.json({
         success: true,
-        data: { invoiceNumber: booking.invoiceNumber, paidAmount: booking.totalPrice, alreadyVerified: true },
+        data: {
+          invoiceNumber: booking.invoiceNumber,
+          paidAmount: booking.totalPrice,
+          alreadyVerified: true,
+        },
         message: `Already verified. Invoice ${booking.invoiceNumber}.`,
       });
     }
 
-    const isTest     = process.env.KHALTI_SECRET_KEY?.startsWith("test_");
-    const khaltiBase = isTest ? "https://a.khalti.com" : "https://khalti.com";
+    // NEW
+    const khaltiBase =
+      process.env.NODE_ENV === "production"
+        ? "https://khalti.com"
+        : "https://a.khalti.com";
 
     const vRes = await fetch(`${khaltiBase}/api/v2/epayment/lookup/`, {
       method: "POST",
-      headers: { "Authorization": `Key ${process.env.KHALTI_SECRET_KEY}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ pidx }),
     });
 
     if (!vRes.ok) {
       const err = await vRes.text();
       console.error("[KHALTI_VERIFY]", vRes.status, err);
-      return NextResponse.json({ success: false, error: `Khalti verification failed (${vRes.status})` }, { status: 502 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Khalti verification failed (${vRes.status})`,
+        },
+        { status: 502 },
+      );
     }
 
     const vData = await vRes.json();
     if (vData.status !== "Completed") {
-      return NextResponse.json({ success: false, error: `Payment not completed. Status: ${vData.status}` }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Payment not completed. Status: ${vData.status}`,
+        },
+        { status: 400 },
+      );
     }
 
     const paidNPR = vData.total_amount / 100;
     if (Math.abs(paidNPR - booking.totalPrice) > 1) {
-      return NextResponse.json({ success: false, error: "Amount mismatch — payment not applied" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Amount mismatch — payment not applied" },
+        { status: 400 },
+      );
     }
 
     const invoiceNumber = generateInvoiceNumber(bookingId, booking.totalPrice);
@@ -56,20 +94,24 @@ export async function POST(req: NextRequest) {
     const updated = await prisma.booking.update({
       where: { id: bookingId },
       data: {
-        status:              "CONFIRMED",
-        paymentStatus:       "PAID",
-        paymentMethod:       "KHALTI",
+        status: "CONFIRMED",
+        paymentStatus: "PAID",
+        paymentMethod: "KHALTI",
         invoiceNumber,
-        invoiceIssuedAt:     new Date(),
-        paidAt:              new Date(),
-        khaltiPidx:          pidx,
+        invoiceIssuedAt: new Date(),
+        paidAt: new Date(),
+        khaltiPidx: pidx,
         khaltiTransactionId: vData.transaction_id ?? null,
       },
     });
 
     return NextResponse.json({
       success: true,
-      data:    { invoiceNumber, paidAmount: paidNPR, transactionId: vData.transaction_id },
+      data: {
+        invoiceNumber,
+        paidAmount: paidNPR,
+        transactionId: vData.transaction_id,
+      },
       message: `Payment verified! Invoice ${invoiceNumber} issued.`,
     });
   } catch (error) {

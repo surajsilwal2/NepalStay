@@ -23,6 +23,9 @@ export const metadata: Metadata = {
     description: "Book hotels across Nepal — Khalti payments, BS calendar, FNMIS compliant.",
     type: "website",
   },
+    icons: {
+    icon: "/logo.png",
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
