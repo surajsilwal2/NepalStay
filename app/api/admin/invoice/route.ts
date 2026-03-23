@@ -55,13 +55,28 @@ export async function POST(req: NextRequest) {
 
     const invoiceNumber = generateInvoiceNumber(bookingId, booking.totalPrice);
 
+    const isOnlinePayment =
+      !!booking.khaltiPidx ||
+      !!booking.stripeSessionId ||
+      booking.paymentMethod !== "CASH";
+    if (isOnlinePayment) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Use the provider-specific invoice recovery flow for online payments",
+        },
+        { status: 400 },
+      );
+    }
+
+
     const updated = await prisma.booking.update({
       where: { id: bookingId },
       data: {
         invoiceNumber,
         invoiceIssuedAt: new Date(),
         paymentStatus: "PAID",
-        paymentMethod: "CASH",
+        paymentMethod: booking.paymentMethod,
         paidAt: new Date(),
       },
     });

@@ -47,7 +47,16 @@ export async function POST(req: NextRequest) {
         { success: false, error: "Unauthorized" },
         { status: 403 },
       );
-    }
+      }
+
+      
+      if (booking.paymentStatus === "PAID") {
+      return NextResponse.json(
+        { success: false, error: "Booking is already paid" },
+        { status: 409 },
+      );
+   }
+
     if (!["PENDING", "CONFIRMED"].includes(booking.status)) {
       return NextResponse.json(
         {
