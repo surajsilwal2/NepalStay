@@ -47,15 +47,14 @@ export async function POST(req: NextRequest) {
         { success: false, error: "Unauthorized" },
         { status: 403 },
       );
-      }
+    }
 
-      
-      if (booking.paymentStatus === "PAID") {
+    if (booking.paymentStatus === "PAID") {
       return NextResponse.json(
         { success: false, error: "Booking is already paid" },
         { status: 409 },
       );
-   }
+    }
 
     if (!["PENDING", "CONFIRMED"].includes(booking.status)) {
       return NextResponse.json(
@@ -64,6 +63,17 @@ export async function POST(req: NextRequest) {
           error: "Booking cannot be paid in its current state",
         },
         { status: 400 },
+      );
+    }
+
+    // Prevent double payment — already paid via Khalti or any other method
+    if (booking.paidAt) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `This booking is already paid via ${booking.paymentMethod ?? "Khalti"}. Invoice: ${booking.invoiceNumber}`,
+        },
+        { status: 409 },
       );
     }
 
