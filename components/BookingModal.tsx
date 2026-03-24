@@ -13,6 +13,7 @@ import { useToast } from "@/components/providers/ToastContext";
 import NepaliDatePicker from "@/components/NepaliDatePicker";
 import KhaltiButton from "@/components/KhaltiButton";
 import StripeButton from "./StripeButton";
+import { getDynamicPrice } from "@/lib/dynamic-pricing";
 
 type Room = {
   id: string; name: string; type: string; pricePerNight: number;
@@ -368,27 +369,66 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
               </div>
 
               {/* Price summary */}
-              {nights > 0 && (
-                <div className="bg-amber-50 rounded-xl p-4 border border-amber-100 space-y-1.5">
-                  <div className="flex justify-between text-sm text-slate-600">
-                    <span>
-                      NPR {room.pricePerNight.toLocaleString()} × {nights} night
-                      {nights > 1 ? "s" : ""}
-                    </span>
-                    <span>NPR {totalPrice.toLocaleString()}</span>
-                  </div>
-                  <div className="border-t border-amber-200 pt-1.5 flex justify-between font-bold text-slate-800">
-                    <span>Total</span>
-                    <span>NPR {totalPrice.toLocaleString()}</span>
-                  </div>
-                  {isBS && checkInDate && checkOutDate && (
-                    <p className="text-xs text-amber-700 pt-0.5">
-                      {formatBS(adToBS(checkInDate))} →{" "}
-                      {formatBS(adToBS(checkOutDate))} BS
-                    </p>
-                  )}
-                </div>
-              )}
+              {nights > 0 &&
+                (() => {
+                  const priceInfo = checkInDate
+                    ? getDynamicPrice(room.pricePerNight, checkInDate)
+                    : null;
+                  const finalPrice = priceInfo
+                    ? priceInfo.price * nights
+                    : totalPrice;
+                  const isSurge = priceInfo?.isSurge;
+                  const isDiscount = priceInfo?.isDiscount;
+
+                  return (
+                    <div className="bg-amber-50 rounded-xl p-4 border border-amber-100 space-y-1.5">
+                      {/* Base price */}
+                      <div className="flex justify-between text-sm text-slate-500">
+                        <span>
+                          NPR {room.pricePerNight.toLocaleString()} × {nights}{" "}
+                          night{nights > 1 ? "s" : ""}
+                        </span>
+                        <span>
+                          NPR {(room.pricePerNight * nights).toLocaleString()}
+                        </span>
+                      </div>
+
+                      {/* Season adjustment */}
+                      {priceInfo &&
+                        (priceInfo.isSurge || priceInfo.isDiscount) && (
+                          <div className="flex justify-between text-sm">
+                            <span
+                              className={
+                                isSurge ? "text-orange-600" : "text-green-600"
+                              }
+                            >
+                              {isSurge ? "🔥" : "💚"}{" "}
+                              {priceInfo.seasonInfo.label}
+                            </span>
+                            <span
+                              className={
+                                isSurge
+                                  ? "text-orange-600 font-medium"
+                                  : "text-green-600 font-medium"
+                              }
+                            >
+                              {isSurge ? "+" : ""}
+                              {Math.round(
+                                (priceInfo.seasonInfo.multiplier - 1) * 100,
+                              )}
+                              %
+                            </span>
+                          </div>
+                        )}
+
+                      {/* Total */}
+                      <div className="border-t border-amber-200 pt-1.5 flex justify-between font-bold text-slate-800">
+                        <span>Total</span>
+                        <span>NPR {finalPrice.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
 
               <button
                 onClick={handleSubmit}

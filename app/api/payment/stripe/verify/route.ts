@@ -102,6 +102,32 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // After prisma.booking.update, add:
+    const { calcPointsEarned, getTier } =
+      await import("@/app/api/loyalty/route");
+
+    const user = await prisma.user.findUnique({
+      where: { id: booking.userId },
+      select: { loyaltyPoints: true, loyaltyTier: true },
+    });
+
+    if (user) {
+      const currentTier = user.loyaltyTier as any;
+      const pointsEarned = calcPointsEarned(booking.totalPrice, currentTier);
+      const newPoints = user.loyaltyPoints + pointsEarned;
+      const newTier = getTier(newPoints);
+
+      await prisma.user.update({
+        where: { id: booking.userId },
+        data: { loyaltyPoints: newPoints, loyaltyTier: newTier },
+      });
+
+      await prisma.booking.update({
+        where: { id: bookingId },
+        data: { pointsEarned },
+      });
+    }
+    
     return NextResponse.json({
       success: true,
       data: { invoiceNumber },

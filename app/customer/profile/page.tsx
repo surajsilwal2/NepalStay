@@ -9,6 +9,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import AvatarUploader from "@/components/AvatarUploader";
 import { useToast } from "@/components/providers/ToastContext";
+import LoyaltyCard from "@/components/features/LoyaltyCard";
 
 const schema = z.object({
   name:    z.string().min(2, "Name must be at least 2 characters"),
@@ -60,11 +61,19 @@ export default function ProfilePage() {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
           {/* Avatar section */}
           <div className="flex flex-col items-center mb-8 pb-6 border-b border-slate-100">
-            <AvatarUploader currentAvatar={user?.avatar} name={user?.name} size="lg" />
-            <p className="mt-3 text-lg font-semibold text-slate-800">{user?.name}</p>
+            <AvatarUploader
+              currentAvatar={user?.avatar}
+              name={user?.name}
+              size="lg"
+            />
+            <p className="mt-3 text-lg font-semibold text-slate-800">
+              {user?.name}
+            </p>
             <p className="text-sm text-slate-500">{user?.email}</p>
             {user?.role && (
-              <span className={`mt-2 px-3 py-0.5 rounded-full text-xs font-semibold ${ROLE_BADGE[user.role] ?? ""}`}>
+              <span
+                className={`mt-2 px-3 py-0.5 rounded-full text-xs font-semibold ${ROLE_BADGE[user.role] ?? ""}`}
+              >
                 {user.role}
               </span>
             )}
@@ -72,28 +81,63 @@ export default function ProfilePage() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {[
-              { label: "Full Name",       name: "name",    type: "text", placeholder: "Your full name" },
-              { label: "Phone Number",    name: "phone",   type: "tel",  placeholder: "+977-XXXXXXXXXX" },
-              { label: "Address",         name: "address", type: "text", placeholder: "Your address" },
+              {
+                label: "Full Name",
+                name: "name",
+                type: "text",
+                placeholder: "Your full name",
+              },
+              {
+                label: "Phone Number",
+                name: "phone",
+                type: "tel",
+                placeholder: "+977-XXXXXXXXXX",
+              },
+              {
+                label: "Address",
+                name: "address",
+                type: "text",
+                placeholder: "Your address",
+              },
             ].map(({ label, name, type, placeholder }) => (
               <div key={name}>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">{label}</label>
-                <input {...register(name as any)} type={type} placeholder={placeholder} className={inputCls} />
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  {label}
+                </label>
+                <input
+                  {...register(name as any)}
+                  type={type}
+                  placeholder={placeholder}
+                  className={inputCls}
+                />
                 {(errors as any)[name] && (
-                  <p className="mt-1 text-xs text-red-600">{(errors as any)[name]?.message}</p>
+                  <p className="mt-1 text-xs text-red-600">
+                    {(errors as any)[name]?.message}
+                  </p>
                 )}
               </div>
             ))}
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
-              <input type="email" value={user?.email ?? ""} disabled
-                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 text-slate-400 cursor-not-allowed" />
-              <p className="mt-1 text-xs text-slate-400">Email cannot be changed</p>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Email
+              </label>
+              <input
+                type="email"
+                value={user?.email ?? ""}
+                disabled
+                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 text-slate-400 cursor-not-allowed"
+              />
+              <p className="mt-1 text-xs text-slate-400">
+                Email cannot be changed
+              </p>
             </div>
 
-            <button type="submit" disabled={isSubmitting}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+            >
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               Save Changes
             </button>
@@ -102,18 +146,24 @@ export default function ProfilePage() {
 
         {/* Quick links */}
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <Link href="/customer/bookings"
-            className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-100 hover:border-amber-200 transition-colors group">
+          <Link
+            href="/customer/bookings"
+            className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-100 hover:border-amber-200 transition-colors group"
+          >
             <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
               <CalendarCheck className="w-4 h-4 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-800">My Bookings</p>
+              <p className="text-sm font-semibold text-slate-800">
+                My Bookings
+              </p>
               <p className="text-xs text-slate-400">View reservations</p>
             </div>
           </Link>
-          <Link href="/customer/wishlist"
-            className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-100 hover:border-amber-200 transition-colors group">
+          <Link
+            href="/customer/wishlist"
+            className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-100 hover:border-amber-200 transition-colors group"
+          >
             <div className="w-9 h-9 bg-red-50 rounded-lg flex items-center justify-center flex-shrink-0">
               <Heart className="w-4 h-4 text-red-500" />
             </div>
@@ -122,6 +172,10 @@ export default function ProfilePage() {
               <p className="text-xs text-slate-400">Saved hotels</p>
             </div>
           </Link>
+        </div>
+        {/* Loyalty Points Card */}
+        <div className="mt-4">
+          <LoyaltyCard />
         </div>
       </main>
     </div>

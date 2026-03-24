@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       where: { id: params.id },
       include: {
         user:  { select: { name: true, email: true, phone: true, avatar: true } },
-        hotel: { select: { name: true, slug: true, city: true, address: true, images: true } },
+        hotel: { select: { name: true, slug: true, city: true, address: true, images: true, contactPhone: true, contactEmail: true } },
         room:  { select: { name: true, type: true, floor: true, pricePerNight: true } },
       },
     });

@@ -5,14 +5,20 @@ import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import {
-  MapPin, Star, Wifi, Heart, Share2, BedDouble, Users, ChevronRight,
-  Loader2, CheckCircle, Shield, Phone, Mail,
+  MapPin, Star, Heart, BedDouble, Users, ChevronRight,
+  CheckCircle, Shield, Phone, Mail, CalendarDays,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import BsDateDisplay from "@/components/BsDateDisplay";
 import BookingModal from "@/components/BookingModal";
 import { useToast } from "@/components/providers/ToastContext";
 import { useSession } from "next-auth/react";
+
+import WeatherWidget      from "@/components/features/WeatherWidget";
+import CarbonFootprint    from "@/components/features/CarbonFootprint";
+import SeasonBadge        from "@/components/features/SeasonBadge";
+import AvailabilityCalendar from "@/components/features/AvailabilityCalendar";
+import PriceDisplay       from "@/components/features/PriceDisplay";
 
 const HotelMap = dynamic(() => import("@/components/HotelMap"), { ssr: false,
   loading: () => <div className="h-64 bg-slate-100 animate-pulse rounded-2xl" />,
@@ -58,6 +64,7 @@ export default function HotelDetailPage() {
   const [wishlisted, setWishlisted] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [activeImg, setActiveImg] = useState(0);
+  const [calendarRoomId, setCalendarRoomId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/hotels/${slug}`)
@@ -66,6 +73,10 @@ export default function HotelDetailPage() {
         if (d.success) {
           setHotel(d.data);
           setWishlisted(d.data.isWishlisted);
+          const firstAvailable = (d.data.rooms as Room[]).find(
+            (r) => r.status === "AVAILABLE",
+          );
+          if (firstAvailable) setCalendarRoomId(firstAvailable.id);
         }
       })
       .finally(() => setLoading(false));
@@ -115,6 +126,18 @@ export default function HotelDetailPage() {
 
   const mainImages = hotel.images.length > 0 ? hotel.images : [null];
 
+  const mapHotel = {
+    id: hotel.id,
+    slug: hotel.slug,
+    name: hotel.name,
+    city: hotel.city,
+    starRating: hotel.starRating,
+    latitude: hotel.latitude,
+    longitude: hotel.longitude,
+    minPrice: hotel.rooms[0]?.pricePerNight ?? 0,
+    avgReview: hotel.avgReview?.overall ?? null,
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar />
@@ -122,7 +145,9 @@ export default function HotelDetailPage() {
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-slate-400 mb-4">
-          <Link href="/hotels" className="hover:text-amber-600">Hotels</Link>
+          <Link href="/hotels" className="hover:text-amber-600">
+            Hotels
+          </Link>
           <ChevronRight className="w-3.5 h-3.5" />
           <span>{hotel.city}</span>
           <ChevronRight className="w-3.5 h-3.5" />
@@ -133,7 +158,12 @@ export default function HotelDetailPage() {
         <div className="grid grid-cols-4 grid-rows-2 gap-2 h-80 rounded-2xl overflow-hidden mb-8">
           <div className="col-span-2 row-span-2 relative bg-slate-200">
             {hotel.images[0] ? (
-              <Image src={hotel.images[activeImg] ?? hotel.images[0]} alt={hotel.name} fill className="object-cover" />
+              <Image
+                src={hotel.images[activeImg] ?? hotel.images[0]}
+                alt={hotel.name}
+                fill
+                className="object-cover"
+              />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
                 <BedDouble className="w-12 h-12 text-slate-400" />
@@ -141,15 +171,30 @@ export default function HotelDetailPage() {
             )}
           </div>
           {hotel.images.slice(1, 5).map((img, i) => (
-            <div key={i} className="relative bg-slate-200 cursor-pointer" onClick={() => setActiveImg(i + 1)}>
-              <Image src={img} alt={`${hotel.name} ${i + 2}`} fill className="object-cover hover:brightness-110 transition-all" />
+            <div
+              key={i}
+              className="relative bg-slate-200 cursor-pointer"
+              onClick={() => setActiveImg(i + 1)}
+            >
+              <Image
+                src={img}
+                alt={`${hotel.name} ${i + 2}`}
+                fill
+                className="object-cover hover:brightness-110 transition-all"
+              />
             </div>
           ))}
-          {hotel.images.length < 5 && Array.from({ length: 4 - (hotel.images.length - 1) }).map((_, i) => (
-            <div key={`empty-${i}`} className="bg-slate-100 flex items-center justify-center">
-              <BedDouble className="w-6 h-6 text-slate-300" />
-            </div>
-          ))}
+          {hotel.images.length < 5 &&
+            Array.from({ length: 4 - (hotel.images.length - 1) }).map(
+              (_, i) => (
+                <div
+                  key={`empty-${i}`}
+                  className="bg-slate-100 flex items-center justify-center"
+                >
+                  <BedDouble className="w-6 h-6 text-slate-300" />
+                </div>
+              ),
+            )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -165,24 +210,41 @@ export default function HotelDetailPage() {
                     </span>
                     <div className="flex">
                       {Array.from({ length: hotel.starRating }).map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                        <Star
+                          key={i}
+                          className="w-4 h-4 fill-amber-400 text-amber-400"
+                        />
                       ))}
                     </div>
                   </div>
-                  <h1 className="text-3xl font-bold text-slate-800">{hotel.name}</h1>
+                  <h1 className="text-3xl font-bold text-slate-800">
+                    {hotel.name}
+                  </h1>
                   <div className="flex items-center gap-1.5 mt-1 text-slate-500">
                     <MapPin className="w-4 h-4" />
-                    <span>{hotel.address}, {hotel.city}</span>
+                    <span>
+                      {hotel.address}, {hotel.city}
+                    </span>
+                  </div>
+                  <div className="mt-2">
+                    <SeasonBadge
+                      basePrice={hotel.rooms[0]?.pricePerNight ?? 0}
+                      showPriceDiff
+                    />
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <button onClick={toggleWishlist}
+                  <button
+                    onClick={toggleWishlist}
                     className={`p-2.5 rounded-xl border transition-colors ${
                       wishlisted
                         ? "bg-red-50 border-red-200 text-red-500"
                         : "border-slate-200 text-slate-400 hover:border-red-300 hover:text-red-400"
-                    }`}>
-                    <Heart className={`w-5 h-5 ${wishlisted ? "fill-red-500" : ""}`} />
+                    }`}
+                  >
+                    <Heart
+                      className={`w-5 h-5 ${wishlisted ? "fill-red-500" : ""}`}
+                    />
                   </button>
                 </div>
               </div>
@@ -195,11 +257,17 @@ export default function HotelDetailPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-green-800 text-sm">
-                      {hotel.avgReview.overall >= 4.5 ? "Exceptional" :
-                       hotel.avgReview.overall >= 4   ? "Excellent" :
-                       hotel.avgReview.overall >= 3.5 ? "Very Good" : "Good"}
+                      {hotel.avgReview.overall >= 4.5
+                        ? "Exceptional"
+                        : hotel.avgReview.overall >= 4
+                          ? "Excellent"
+                          : hotel.avgReview.overall >= 3.5
+                            ? "Very Good"
+                            : "Good"}
                     </p>
-                    <p className="text-xs text-green-600">{hotel._count.reviews} verified reviews</p>
+                    <p className="text-xs text-green-600">
+                      {hotel._count.reviews} verified reviews
+                    </p>
                   </div>
                 </div>
               )}
@@ -207,67 +275,139 @@ export default function HotelDetailPage() {
 
             {/* Description */}
             <div>
-              <h2 className="text-xl font-bold text-slate-800 mb-3">About this property</h2>
-              <p className="text-slate-600 leading-relaxed">{hotel.description}</p>
+              <h2 className="text-xl font-bold text-slate-800 mb-3">
+                About this property
+              </h2>
+              <p className="text-slate-600 leading-relaxed">
+                {hotel.description}
+              </p>
             </div>
 
             {/* Amenities */}
             <div>
-              <h2 className="text-xl font-bold text-slate-800 mb-3">Amenities</h2>
+              <h2 className="text-xl font-bold text-slate-800 mb-3">
+                Amenities
+              </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {hotel.amenities.map((a) => (
-                  <div key={a} className="flex items-center gap-2 text-sm text-slate-600">
+                  <div
+                    key={a}
+                    className="flex items-center gap-2 text-sm text-slate-600"
+                  >
                     <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
                     {a}
                   </div>
                 ))}
               </div>
             </div>
+            <CarbonFootprint
+              nights={1}
+              propertyType={hotel.propertyType}
+              city={hotel.city}
+              guestCount={2}
+            />
 
             {/* Rooms */}
             <div>
-              <h2 className="text-xl font-bold text-slate-800 mb-4">Available Rooms</h2>
+              <h2 className="text-xl font-bold text-slate-800 mb-4">
+                Available Rooms
+              </h2>
               <div className="space-y-3">
-                {hotel.rooms.filter((r) => r.status === "AVAILABLE").map((room) => (
-                  <div key={room.id}
-                    className="bg-white rounded-2xl border border-slate-100 p-5 flex items-center justify-between gap-4 hover:border-amber-200 transition-colors">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-bold text-slate-800">{room.name}</h3>
-                        <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{room.type}</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-sm text-slate-500 mb-2">
-                        <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />Up to {room.capacity}</span>
-                        <span>Floor {room.floor}</span>
-                      </div>
-                      {room.description && (
-                        <p className="text-xs text-slate-400 mb-2 line-clamp-1">{room.description}</p>
-                      )}
-                      <div className="flex flex-wrap gap-1">
-                        {room.amenities.slice(0, 4).map((a) => (
-                          <span key={a} className="text-xs bg-slate-50 border border-slate-100 text-slate-500 px-2 py-0.5 rounded">
-                            {a}
+                {hotel.rooms
+                  .filter((r) => r.status === "AVAILABLE")
+                  .map((room) => (
+                    <div
+                      key={room.id}
+                      className="bg-white rounded-2xl border border-slate-100 p-5 flex items-center justify-between gap-4 hover:border-amber-200 transition-colors"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-bold text-slate-800">
+                            {room.name}
+                          </h3>
+                          <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                            {room.type}
                           </span>
-                        ))}
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-slate-500 mb-2">
+                          <span className="flex items-center gap-1">
+                            <Users className="w-3.5 h-3.5" />
+                            Up to {room.capacity}
+                          </span>
+                          <span>Floor {room.floor}</span>
+                        </div>
+                        {room.description && (
+                          <p className="text-xs text-slate-400 mb-2 line-clamp-1">
+                            {room.description}
+                          </p>
+                        )}
+                        <div className="flex flex-wrap gap-1">
+                          {room.amenities.slice(0, 4).map((a) => (
+                            <span
+                              key={a}
+                              className="text-xs bg-slate-50 border border-slate-100 text-slate-500 px-2 py-0.5 rounded"
+                            >
+                              {a}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <PriceDisplay
+                          amountNPR={room.pricePerNight}
+                          className="mb-1"
+                        />
+                        <SeasonBadge
+                          basePrice={room.pricePerNight}
+                          showPriceDiff
+                          compact
+                        />
+                        <div className="flex items-center gap-2 mt-2 justify-end">
+                          <button
+                            onClick={() =>
+                              setCalendarRoomId(
+                                calendarRoomId === room.id ? null : room.id,
+                              )
+                            }
+                            className={`flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
+                              calendarRoomId === room.id
+                                ? "bg-amber-50 border-amber-300 text-amber-700"
+                                : "border-slate-200 text-slate-500 hover:border-amber-300 hover:text-amber-600"
+                            }`}
+                          >
+                            <CalendarDays className="w-3 h-3" />
+                            Availability
+                          </button>
+                          <button
+                            onClick={() => setSelectedRoom(room)}
+                            className="px-5 py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-sm font-semibold rounded-xl transition-all"
+                          >
+                            Book Now
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-2xl font-bold text-slate-800">NPR {room.pricePerNight.toLocaleString()}</p>
-                      <p className="text-xs text-slate-400 mb-2">/night</p>
-                      <button onClick={() => setSelectedRoom(room)}
-                        className="px-5 py-2 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-sm font-semibold rounded-xl transition-all">
-                        Book Now
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                {hotel.rooms.filter((r) => r.status === "AVAILABLE").length === 0 && (
+                  ))}
+                {hotel.rooms.filter((r) => r.status === "AVAILABLE").length ===
+                  0 && (
                   <div className="text-center py-10 bg-white rounded-2xl border border-slate-100">
                     <BedDouble className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                    <p className="text-slate-500">No rooms available right now.</p>
+                    <p className="text-slate-500">
+                      No rooms available right now.
+                    </p>
                   </div>
                 )}
               </div>
+              {calendarRoomId && (
+                <div className="mt-3">
+                  <AvailabilityCalendar
+                    roomId={calendarRoomId}
+                    roomName={
+                      hotel.rooms.find((r) => r.id === calendarRoomId)?.name
+                    }
+                  />
+                </div>
+              )}
             </div>
 
             {/* Review breakdown */}
@@ -279,13 +419,18 @@ export default function HotelDetailPage() {
                 {/* Score breakdown */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
                   {SCORE_LABELS.map(({ key, label }) => (
-                    <div key={key} className="bg-white rounded-xl border border-slate-100 p-3">
+                    <div
+                      key={key}
+                      className="bg-white rounded-xl border border-slate-100 p-3"
+                    >
                       <p className="text-xs text-slate-400 mb-1">{label}</p>
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-amber-400 rounded-full"
-                            style={{ width: `${(hotel.avgReview![key] / 5) * 100}%` }}
+                            style={{
+                              width: `${(hotel.avgReview![key] / 5) * 100}%`,
+                            }}
                           />
                         </div>
                         <span className="text-sm font-bold text-slate-700">
@@ -299,20 +444,33 @@ export default function HotelDetailPage() {
                 {/* Individual reviews */}
                 <div className="space-y-4">
                   {hotel.reviews.map((r) => (
-                    <div key={r.id} className="bg-white rounded-2xl border border-slate-100 p-5">
+                    <div
+                      key={r.id}
+                      className="bg-white rounded-2xl border border-slate-100 p-5"
+                    >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
                           {r.user.avatar ? (
-                            <Image src={r.user.avatar} alt={r.user.name} width={36} height={36}
-                              className="rounded-full object-cover" />
+                            <Image
+                              src={r.user.avatar}
+                              alt={r.user.name}
+                              width={36}
+                              height={36}
+                              className="rounded-full object-cover"
+                            />
                           ) : (
                             <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center text-sm font-bold text-amber-700">
                               {r.user.name[0]}
                             </div>
                           )}
                           <div>
-                            <p className="font-semibold text-sm text-slate-800">{r.user.name}</p>
-                            <BsDateDisplay date={r.createdAt} className="text-xs text-slate-400" />
+                            <p className="font-semibold text-sm text-slate-800">
+                              {r.user.name}
+                            </p>
+                            <BsDateDisplay
+                              date={r.createdAt}
+                              className="text-xs text-slate-400"
+                            />
                           </div>
                         </div>
                         <div className="flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded-lg text-sm font-bold">
@@ -320,8 +478,14 @@ export default function HotelDetailPage() {
                           {r.overallScore.toFixed(1)}
                         </div>
                       </div>
-                      {r.title && <p className="font-semibold text-slate-700 mb-1">{r.title}</p>}
-                      <p className="text-sm text-slate-600 leading-relaxed">{r.body}</p>
+                      {r.title && (
+                        <p className="font-semibold text-slate-700 mb-1">
+                          {r.title}
+                        </p>
+                      )}
+                      <p className="text-sm text-slate-600 leading-relaxed">
+                        {r.body}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -331,13 +495,19 @@ export default function HotelDetailPage() {
             {/* Map */}
             {hotel.latitude && hotel.longitude && (
               <div>
-                <h2 className="text-xl font-bold text-slate-800 mb-4">Location</h2>
+                <h2 className="text-xl font-bold text-slate-800 mb-4">
+                  Location
+                </h2>
                 <div className="h-64 rounded-2xl overflow-hidden border border-slate-200">
                   <HotelMap
-                    hotels={[{ ...hotel, minPrice: hotel.rooms[0]?.pricePerNight ?? 0, avgReview: hotel.avgReview?.overall ?? null, reviewCount: hotel._count.reviews }]}
+                    hotels={[mapHotel]}
                     activeHotelId={hotel.id}
                     zoom={14}
-                    center={[hotel.latitude, hotel.longitude]}
+                    center={
+                      hotel.latitude && hotel.longitude
+                        ? [hotel.latitude, hotel.longitude]
+                        : undefined
+                    }
                   />
                 </div>
               </div>
@@ -351,30 +521,44 @@ export default function HotelDetailPage() {
               <h3 className="font-bold text-slate-800 mb-3">Contact Hotel</h3>
               <div className="space-y-2">
                 {hotel.contactPhone && (
-                  <a href={`tel:${hotel.contactPhone}`}
-                    className="flex items-center gap-2 text-sm text-slate-600 hover:text-amber-600 transition-colors">
-                    <Phone className="w-4 h-4 flex-shrink-0" />{hotel.contactPhone}
+                  <a
+                    href={`tel:${hotel.contactPhone}`}
+                    className="flex items-center gap-2 text-sm text-slate-600 hover:text-amber-600 transition-colors"
+                  >
+                    <Phone className="w-4 h-4 flex-shrink-0" />
+                    {hotel.contactPhone}
                   </a>
                 )}
                 {hotel.contactEmail && (
-                  <a href={`mailto:${hotel.contactEmail}`}
-                    className="flex items-center gap-2 text-sm text-slate-600 hover:text-amber-600 transition-colors">
-                    <Mail className="w-4 h-4 flex-shrink-0" />{hotel.contactEmail}
+                  <a
+                    href={`mailto:${hotel.contactEmail}`}
+                    className="flex items-center gap-2 text-sm text-slate-600 hover:text-amber-600 transition-colors"
+                  >
+                    <Mail className="w-4 h-4 flex-shrink-0" />
+                    {hotel.contactEmail}
                   </a>
                 )}
               </div>
 
               {hotel.policies && (
                 <div className="mt-4 pt-4 border-t border-slate-100 space-y-1.5">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Policies</p>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                    Policies
+                  </p>
                   {hotel.policies.checkIn && (
-                    <p className="text-xs text-slate-500">Check-in: <strong>{hotel.policies.checkIn}</strong></p>
+                    <p className="text-xs text-slate-500">
+                      Check-in: <strong>{hotel.policies.checkIn}</strong>
+                    </p>
                   )}
                   {hotel.policies.checkOut && (
-                    <p className="text-xs text-slate-500">Check-out: <strong>{hotel.policies.checkOut}</strong></p>
+                    <p className="text-xs text-slate-500">
+                      Check-out: <strong>{hotel.policies.checkOut}</strong>
+                    </p>
                   )}
                   {hotel.policies.cancellation && (
-                    <p className="text-xs text-slate-500">{hotel.policies.cancellation}</p>
+                    <p className="text-xs text-slate-500">
+                      {hotel.policies.cancellation}
+                    </p>
                   )}
                 </div>
               )}
@@ -384,21 +568,32 @@ export default function HotelDetailPage() {
                 Booking protected by NepalStay guarantee
               </div>
             </div>
+            <WeatherWidget city={hotel.city} />
           </div>
         </div>
 
         {/* Recommendations */}
         {hotel.recommendations.length > 0 && (
           <div className="mt-12">
-            <h2 className="text-2xl font-bold text-slate-800 mb-6">Similar Hotels You Might Like</h2>
+            <h2 className="text-2xl font-bold text-slate-800 mb-6">
+              Similar Hotels You Might Like
+            </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {hotel.recommendations.map((rec: any) => (
-                <Link key={rec.id} href={`/hotels/${rec.slug}`}
-                  className="bg-white rounded-2xl border border-slate-100 overflow-hidden hover:shadow-md transition-shadow group">
+                <Link
+                  key={rec.id}
+                  href={`/hotels/${rec.slug}`}
+                  className="bg-white rounded-2xl border border-slate-100 overflow-hidden hover:shadow-md transition-shadow group"
+                >
                   <div className="h-36 relative bg-slate-200 overflow-hidden">
                     {rec.images?.[0] ? (
-                      <Image src={rec.images[0]} alt={rec.name} fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="33vw" />
+                      <Image
+                        src={rec.images[0]}
+                        alt={rec.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        sizes="33vw"
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <BedDouble className="w-8 h-8 text-slate-400" />
@@ -406,9 +601,12 @@ export default function HotelDetailPage() {
                     )}
                   </div>
                   <div className="p-3">
-                    <p className="font-bold text-slate-800 text-sm line-clamp-1">{rec.name}</p>
+                    <p className="font-bold text-slate-800 text-sm line-clamp-1">
+                      {rec.name}
+                    </p>
                     <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                      <MapPin className="w-3 h-3" />{rec.city}
+                      <MapPin className="w-3 h-3" />
+                      {rec.city}
                     </p>
                     <p className="text-sm font-semibold text-amber-600 mt-1">
                       from NPR {Math.round(rec.avgPrice).toLocaleString()}/night
@@ -426,7 +624,9 @@ export default function HotelDetailPage() {
           room={selectedRoom}
           hotel={{ id: hotel.id, name: hotel.name, slug: hotel.slug }}
           onClose={() => setSelectedRoom(null)}
-          onSuccess={() => { setSelectedRoom(null); }}
+          onSuccess={() => {
+            setSelectedRoom(null);
+          }}
         />
       )}
     </div>
