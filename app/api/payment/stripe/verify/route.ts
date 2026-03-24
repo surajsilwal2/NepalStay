@@ -2,106 +2,103 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import Stripe from "stripe";
 import { generateInvoiceNumber } from "@/lib/booking";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2026-02-25.clover",
+});
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session)
+    if (!session) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 },
       );
+    }
 
-    const { pidx, bookingId } = await req.json();
-    if (!pidx || !bookingId) {
+    const { sessionId, bookingId } = await req.json();
+
+    if (!sessionId || !bookingId) {
       return NextResponse.json(
-        { success: false, error: "pidx and bookingId are required" },
+        { success: false, error: "sessionId and bookingId are required" },
         { status: 400 },
       );
     }
 
+    // ── Idempotency check ───────────────────────────────────────────────────
+    // If booking is already paid, return existing invoice — do not call Stripe again
     const booking = await prisma.booking.findUnique({
       where: { id: bookingId },
     });
-    if (!booking)
+
+    if (!booking) {
       return NextResponse.json(
         { success: false, error: "Booking not found" },
         { status: 404 },
       );
+    }
 
-    // Idempotency — already verified
     if (booking.paidAt && booking.invoiceNumber) {
       return NextResponse.json({
         success: true,
         data: {
           invoiceNumber: booking.invoiceNumber,
-          paidAmount: booking.totalPrice,
           alreadyVerified: true,
         },
-        message: `Already verified. Invoice ${booking.invoiceNumber}.`,
+        message: `Already confirmed. Invoice ${booking.invoiceNumber}.`,
       });
     }
 
-    // NEW
-    const khaltiBase =
-      process.env.NODE_ENV === "production"
-        ? "https://khalti.com"
-        : "https://a.khalti.com";
-
-    const vRes = await fetch(`${khaltiBase}/api/v2/epayment/lookup/`, {
-      method: "POST",
-      headers: {
-        Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ pidx }),
-    });
-
-    if (!vRes.ok) {
-      const err = await vRes.text();
-      console.error("[KHALTI_VERIFY]", vRes.status, err);
+    // ── Verify with Stripe ──────────────────────────────────────────────────
+    let stripeSession: Stripe.Checkout.Session;
+    try {
+      stripeSession = await stripe.checkout.sessions.retrieve(sessionId);
+    } catch {
       return NextResponse.json(
         {
           success: false,
-          error: `Khalti verification failed (${vRes.status})`,
+          error:
+            "Could not retrieve session from Stripe. Please check your bookings.",
         },
         { status: 502 },
       );
     }
 
-    const vData = await vRes.json();
-    if (vData.status !== "Completed") {
+    // Payment must be completed on Stripe side
+    if (stripeSession.payment_status !== "paid") {
       return NextResponse.json(
         {
           success: false,
-          error: `Payment not completed. Status: ${vData.status}`,
+          error: `Payment not completed. Status from Stripe: ${stripeSession.payment_status}`,
         },
         { status: 400 },
       );
     }
 
-    const paidNPR = vData.total_amount / 100;
-    if (Math.abs(paidNPR - booking.totalPrice) > 1) {
+    // Metadata bookingId must match — prevents one user verifying another's payment
+    if (stripeSession.metadata?.bookingId !== bookingId) {
       return NextResponse.json(
-        { success: false, error: "Amount mismatch — payment not applied" },
+        { success: false, error: "Booking ID does not match payment session." },
         { status: 400 },
       );
     }
 
+    // ── Update booking — single source of truth ─────────────────────────────
     const invoiceNumber = generateInvoiceNumber(bookingId, booking.totalPrice);
 
-    const updated = await prisma.booking.update({
+    await prisma.booking.update({
       where: { id: bookingId },
       data: {
         status: "CONFIRMED",
         paymentStatus: "PAID",
-        paymentMethod: "KHALTI",
+        paymentMethod: "STRIPE",
         invoiceNumber,
         invoiceIssuedAt: new Date(),
         paidAt: new Date(),
-        khaltiPidx: pidx,
-        khaltiTransactionId: vData.transaction_id ?? null,
+        stripeSessionId: sessionId,
       },
     });
 
@@ -130,18 +127,17 @@ export async function POST(req: NextRequest) {
         data: { pointsEarned },
       });
     }
-
+    
     return NextResponse.json({
       success: true,
-      data: {
-        invoiceNumber,
-        paidAmount: paidNPR,
-        transactionId: vData.transaction_id,
-      },
-      message: `Payment verified! Invoice ${invoiceNumber} issued.`,
+      data: { invoiceNumber },
+      message: `Payment confirmed. Invoice ${invoiceNumber} issued.`,
     });
   } catch (error) {
-    console.error("[KHALTI_VERIFY]", error);
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+    console.error("[STRIPE_VERIFY]", error);
+    return NextResponse.json(
+      { success: false, error: "Verification failed. Please contact support." },
+      { status: 500 },
+    );
   }
 }

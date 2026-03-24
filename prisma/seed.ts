@@ -12,7 +12,7 @@ async function main() {
   // ── Users ─────────────────────────────────────────────────────────────────
   const admin = await prisma.user.upsert({
     where: { email: "admin@nepalstay.com" },
-    update: {},
+    update: { password: adminPassword },
     create: {
       name: "Admin User",
       email: "admin@nepalstay.com",
@@ -24,7 +24,7 @@ async function main() {
 
   const vendor1 = await prisma.user.upsert({
     where: { email: "vendor1@nepalstay.com" },
-    update: {},
+    update: { password: hashedPassword },
     create: {
       name: "Raj Shrestha",
       email: "vendor1@nepalstay.com",
@@ -36,7 +36,7 @@ async function main() {
 
   const vendor2 = await prisma.user.upsert({
     where: { email: "vendor2@nepalstay.com" },
-    update: {},
+    update: { password: hashedPassword },
     create: {
       name: "Sita Gurung",
       email: "vendor2@nepalstay.com",
@@ -49,7 +49,7 @@ async function main() {
   // One hotel per vendor — schema has @@unique on vendorId
   const vendor3 = await prisma.user.upsert({
     where: { email: "vendor3@nepalstay.com" },
-    update: {},
+    update: { password: hashedPassword },
     create: {
       name: "Binod Thapa",
       email: "vendor3@nepalstay.com",
@@ -59,9 +59,69 @@ async function main() {
     },
   });
 
+  const vendor4 = await prisma.user.upsert({
+    where: { email: "vendor4@nepalstay.com" },
+    update: {},
+    create: {
+      name: "Deepak Rai",
+      email: "vendor4@nepalstay.com",
+      password: hashedPassword,
+      role: "VENDOR",
+      phone: "+977-9841000004",
+    },
+  });
+
+  const vendor5 = await prisma.user.upsert({
+    where: { email: "vendor5@nepalstay.com" },
+    update: {},
+    create: {
+      name: "Anita Karki",
+      email: "vendor5@nepalstay.com",
+      password: hashedPassword,
+      role: "VENDOR",
+      phone: "+977-9841000005",
+    },
+  });
+
+  const vendor6 = await prisma.user.upsert({
+    where: { email: "vendor6@nepalstay.com" },
+    update: {},
+    create: {
+      name: "Suresh Magar",
+      email: "vendor6@nepalstay.com",
+      password: hashedPassword,
+      role: "VENDOR",
+      phone: "+977-9841000006",
+    },
+  });
+
+  const vendor7 = await prisma.user.upsert({
+    where: { email: "vendor7@nepalstay.com" },
+    update: {},
+    create: {
+      name: "Kamala Bista",
+      email: "vendor7@nepalstay.com",
+      password: hashedPassword,
+      role: "VENDOR",
+      phone: "+977-9841000007",
+    },
+  });
+
+  const vendor8 = await prisma.user.upsert({
+    where: { email: "vendor8@nepalstay.com" },
+    update: {},
+    create: {
+      name: "Prakash Limbu",
+      email: "vendor8@nepalstay.com",
+      password: hashedPassword,
+      role: "VENDOR",
+      phone: "+977-9841000008",
+    },
+  });
+
   const staff1 = await prisma.user.upsert({
     where: { email: "staff@nepalstay.com" },
-    update: {},
+    update: { password: hashedPassword },
     create: {
       name: "Ram Tamang",
       email: "staff@nepalstay.com",
@@ -73,7 +133,7 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: "customer@nepalstay.com" },
-    update: {},
+    update: { password: hashedPassword },
     create: {
       name: "Priya Maharjan",
       email: "customer@nepalstay.com",
@@ -106,6 +166,502 @@ async function main() {
     "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=800&q=80",
     "https://images.unsplash.com/photo-1549294413-26f195200c16?w=800&q=80",
   ];
+
+  // ── 5 Additional Hotels ───────────────────────────────────────────────────
+
+  const hotel4Images = [
+    "https://images.unsplash.com/photo-1455587734955-081b22074882?w=1200&q=80",
+    "https://images.unsplash.com/photo-1496417263034-38ec4f0b665a?w=800&q=80",
+    "https://images.unsplash.com/photo-1522798514-97ceb8c4f1c8?w=800&q=80",
+    "https://images.unsplash.com/photo-1554995207-c18c203602cb?w=800&q=80",
+    "https://images.unsplash.com/photo-1487017159836-4e23ece2e4cf?w=800&q=80",
+  ];
+
+const hotel5Images = [
+  "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200&q=80",
+  "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=800&q=80",
+  "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80",
+  "https://images.unsplash.com/photo-1551882547-ff40c4a49f7e?w=800&q=80",
+  "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?w=800&q=80",
+];
+
+  const hotel6Images = [
+    "https://images.unsplash.com/photo-1512100356356-de1b84283e18?w=1200&q=80",
+    "https://images.unsplash.com/photo-1549294413-26f195200c16?w=800&q=80",
+    "https://images.unsplash.com/photo-1601701119533-fde05e6ee5bc?w=800&q=80",
+    "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=800&q=80",
+    "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800&q=80",
+  ];
+
+  const hotel7Images = [
+    "https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=1200&q=80",
+    "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800&q=80",
+    "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800&q=80",
+    "https://images.unsplash.com/photo-1587088407891-249cb8f5e9d8?w=800&q=80",
+    "https://images.unsplash.com/photo-1568495248636-6432b97bd949?w=800&q=80",
+  ];
+
+  const hotel8Images = [
+    "https://images.unsplash.com/photo-1506059612708-99d6c258160e?w=1200&q=80",
+    "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?w=800&q=80",
+    "https://images.unsplash.com/photo-1460317442991-0ec209397118?w=800&q=80",
+    "https://images.unsplash.com/photo-1467881452275-fc17a1fccf92?w=800&q=80",
+    "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80",
+  ];
+
+  // Hotel 4 — Nagarkot View Resort
+  const hotel4 = await prisma.hotel.upsert({
+    where: { slug: "nagarkot-sunrise-view-resort" },
+    update: { images: hotel4Images },
+    create: {
+      vendorId: vendor4.id,
+      name: "Nagarkot Sunrise View Resort",
+      slug: "nagarkot-sunrise-view-resort",
+      description:
+        "Perched at 2175 metres above sea level, Nagarkot Sunrise View Resort offers the most breathtaking panoramic views of the Himalayan range including Everest on a clear day. Watch the golden sunrise paint the peaks while enjoying authentic Newari cuisine. The perfect mountain retreat just 32 km from Kathmandu.",
+      status: "APPROVED",
+      city: "Nagarkot",
+      address: "Nagarkot Hill, Bhaktapur 44800",
+      latitude: 27.7167,
+      longitude: 85.5167,
+      starRating: 4,
+      propertyType: "Resort",
+      amenities: [
+        "WiFi",
+        "Restaurant",
+        "Mountain View",
+        "Garden",
+        "Parking",
+        "Fireplace",
+      ],
+      images: hotel4Images,
+      contactPhone: "+977-011-661234",
+      contactEmail: "info@nagarkotresort.com",
+      policies: {
+        checkIn: "13:00",
+        checkOut: "11:00",
+        cancellation: "Free cancellation up to 72 hours before check-in",
+      },
+      approvedAt: new Date(),
+      approvedBy: admin.id,
+    },
+  });
+
+  // Hotel 5 — Lumbini Peace Hotel
+  const hotel5 = await prisma.hotel.upsert({
+    where: { slug: "lumbini-peace-garden-hotel" },
+    update: { images: hotel5Images },
+    create: {
+      vendorId: vendor5.id,
+      name: "Lumbini Peace Garden Hotel",
+      slug: "lumbini-peace-garden-hotel",
+      description:
+        "Located in the sacred birthplace of Lord Buddha, Lumbini Peace Garden Hotel offers serene accommodation surrounded by monasteries and meditation gardens. A spiritual retreat for pilgrims and travellers from around the world. Walking distance from the Maya Devi Temple and the eternal flame.",
+      status: "APPROVED",
+      city: "Lumbini",
+      address: "Buddha Marg, Lumbini 32914",
+      latitude: 27.4833,
+      longitude: 83.275,
+      starRating: 3,
+      propertyType: "Hotel",
+      amenities: [
+        "WiFi",
+        "Restaurant",
+        "Garden",
+        "Parking",
+        "AC",
+        "Meditation Hall",
+      ],
+      images: hotel5Images,
+      contactPhone: "+977-071-580456",
+      contactEmail: "stay@lumbinipeacehotel.com",
+      policies: {
+        checkIn: "12:00",
+        checkOut: "10:00",
+        cancellation: "Full refund up to 48 hours before check-in",
+      },
+      approvedAt: new Date(),
+      approvedBy: admin.id,
+    },
+  });
+
+  // Hotel 6 — Bandipur Hill Guesthouse
+  const hotel6 = await prisma.hotel.upsert({
+    where: { slug: "bandipur-hill-guesthouse" },
+    update: { images: hotel6Images },
+    create: {
+      vendorId: vendor6.id,
+      name: "Bandipur Hill Guesthouse",
+      slug: "bandipur-hill-guesthouse",
+      description:
+        "A charming heritage guesthouse in the perfectly preserved medieval town of Bandipur. Stone-paved streets, Newari architecture, and stunning valley views make this one of Nepal's most atmospheric destinations. Experience the real Nepal away from the tourist crowds. Listed as one of the top hidden gems in Asia.",
+      status: "APPROVED",
+      city: "Kathmandu",
+      address: "Bandipur Bazaar, Tanahun 35100",
+      latitude: 27.933,
+      longitude: 84.41,
+      starRating: 3,
+      propertyType: "Guesthouse",
+      amenities: ["WiFi", "Restaurant", "Mountain View", "Garden", "Hot Water"],
+      images: hotel6Images,
+      contactPhone: "+977-065-520789",
+      contactEmail: "hello@bandipurguesthouse.com",
+      policies: {
+        checkIn: "14:00",
+        checkOut: "11:00",
+        cancellation: "50% refund for cancellations within 48 hours",
+      },
+      approvedAt: new Date(),
+      approvedBy: admin.id,
+    },
+  });
+
+  // Hotel 7 — Pokhara Grand Boutique Hotel
+  const hotel7 = await prisma.hotel.upsert({
+    where: { slug: "pokhara-grand-boutique-hotel" },
+    update: { images: hotel7Images },
+    create: {
+      vendorId: vendor7.id,
+      name: "Pokhara Grand Boutique Hotel",
+      slug: "pokhara-grand-boutique-hotel",
+      description:
+        "A sophisticated boutique hotel in the heart of Pokhara city, just 5 minutes from Phewa Lake. Tastefully designed rooms blend modern comfort with traditional Nepali craftsmanship. Rooftop restaurant with live music on weekends. Ideal base for paragliding, boating, World Peace Pagoda visits, and the Annapurna Circuit trek.",
+      status: "APPROVED",
+      city: "Pokhara",
+      address: "New Road, Pokhara 33700",
+      latitude: 28.238,
+      longitude: 83.9956,
+      starRating: 4,
+      propertyType: "Boutique Hotel",
+      amenities: [
+        "WiFi",
+        "Restaurant",
+        "Bar",
+        "Rooftop",
+        "AC",
+        "Gym",
+        "Mountain View",
+      ],
+      images: hotel7Images,
+      contactPhone: "+977-061-523456",
+      contactEmail: "info@pokharaGrand.com",
+      policies: {
+        checkIn: "14:00",
+        checkOut: "12:00",
+        cancellation: "Free cancellation up to 24 hours before check-in",
+      },
+      approvedAt: new Date(),
+      approvedBy: admin.id,
+    },
+  });
+
+  // Hotel 8 — Everest Base Camp Lodge
+  const hotel8 = await prisma.hotel.upsert({
+    where: { slug: "namche-bazaar-everest-lodge" },
+    update: { images: hotel8Images },
+    create: {
+      vendorId: vendor8.id,
+      name: "Namche Bazaar Everest Lodge",
+      slug: "namche-bazaar-everest-lodge",
+      description:
+        "A legendary trekkers lodge in Namche Bazaar, the gateway to Everest. Warm yak-wool blankets, hot dal bhat, and stories from fellow adventurers around a wood fire. Acclimatisation walks, yak cheese, and the world's most famous mountain just ahead. The first stop on the Everest Base Camp trek at 3440 metres.",
+      status: "APPROVED",
+      city: "Kathmandu",
+      address: "Namche Bazaar, Solukhumbu 56000",
+      latitude: 27.8069,
+      longitude: 86.7139,
+      starRating: 2,
+      propertyType: "Lodge",
+      amenities: [
+        "WiFi",
+        "Restaurant",
+        "Hot Water",
+        "Mountain View",
+        "Fireplace",
+      ],
+      images: hotel8Images,
+      contactPhone: "+977-038-540123",
+      contactEmail: "trek@namchelodge.com",
+      policies: {
+        checkIn: "12:00",
+        checkOut: "09:00",
+        cancellation: "No refund — remote location, all bookings final",
+      },
+      approvedAt: new Date(),
+      approvedBy: admin.id,
+    },
+  });
+
+  // ── Rooms for 5 new hotels ────────────────────────────────────────────────
+  await prisma.room.createMany({
+    skipDuplicates: true,
+    data: [
+      // Hotel 4 — Nagarkot Sunrise View Resort
+      {
+        hotelId: hotel4.id,
+        name: "Mountain View Room",
+        type: "DOUBLE",
+        pricePerNight: 4500,
+        capacity: 2,
+        floor: 2,
+        totalRooms: 8,
+        description:
+          "Wake up to panoramic Himalayan views from your private balcony. On clear days you can see Mount Everest.",
+        amenities: ["WiFi", "Hot Water", "Balcony", "Mountain View", "Heater"],
+        images: [
+          "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=800&q=80",
+        ],
+      },
+      {
+        hotelId: hotel4.id,
+        name: "Sunrise Deluxe",
+        type: "DELUXE",
+        pricePerNight: 7500,
+        capacity: 2,
+        floor: 3,
+        totalRooms: 4,
+        description:
+          "Premium east-facing room positioned perfectly for Himalayan sunrise views. Includes telescope for stargazing.",
+        amenities: [
+          "WiFi",
+          "Hot Water",
+          "Balcony",
+          "Mountain View",
+          "Heater",
+          "Telescope",
+        ],
+        images: [
+          "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&q=80",
+        ],
+      },
+      {
+        hotelId: hotel4.id,
+        name: "Family Cottage",
+        type: "TWIN",
+        pricePerNight: 6000,
+        capacity: 4,
+        floor: 1,
+        totalRooms: 3,
+        description:
+          "Cozy standalone cottage with two bedrooms, perfect for families exploring the mountain area.",
+        amenities: ["WiFi", "Hot Water", "Garden View", "Heater", "Fireplace"],
+        images: [
+          "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=800&q=80",
+        ],
+      },
+
+      // Hotel 5 — Lumbini Peace Garden Hotel
+      {
+        hotelId: hotel5.id,
+        name: "Pilgrim Standard Room",
+        type: "SINGLE",
+        pricePerNight: 2200,
+        capacity: 2,
+        floor: 1,
+        totalRooms: 12,
+        description:
+          "Simple, clean room perfect for pilgrims. Quiet atmosphere conducive to meditation and reflection.",
+        amenities: ["WiFi", "AC", "Hot Water", "Garden View"],
+        images: [
+          "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800&q=80",
+        ],
+      },
+      {
+        hotelId: hotel5.id,
+        name: "Monastery View Suite",
+        type: "SUITE",
+        pricePerNight: 5500,
+        capacity: 3,
+        floor: 2,
+        totalRooms: 3,
+        description:
+          "Spacious suite overlooking the sacred garden and monasteries. Private meditation balcony included.",
+        amenities: [
+          "WiFi",
+          "AC",
+          "Hot Water",
+          "Garden View",
+          "Balcony",
+          "Minibar",
+        ],
+        images: [
+          "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800&q=80",
+        ],
+      },
+      {
+        hotelId: hotel5.id,
+        name: "Dormitory",
+        type: "DORMITORY",
+        pricePerNight: 600,
+        capacity: 1,
+        floor: 1,
+        totalRooms: 20,
+        description:
+          "Affordable dormitory for budget pilgrims and backpackers. Clean, safe, with 24-hour security.",
+        amenities: ["WiFi", "Hot Water", "Locker", "Fan"],
+        images: [
+          "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&q=80",
+        ],
+      },
+
+      // Hotel 6 — Bandipur Hill Guesthouse
+      {
+        hotelId: hotel6.id,
+        name: "Heritage Room",
+        type: "DOUBLE",
+        pricePerNight: 3200,
+        capacity: 2,
+        floor: 1,
+        totalRooms: 6,
+        description:
+          "Traditional Newari-style room with wooden carvings and antique furnishings. Valley views from every window.",
+        amenities: ["WiFi", "Hot Water", "Mountain View", "Heater"],
+        images: [
+          "https://images.unsplash.com/photo-1591088398332-8a7791972843?w=800&q=80",
+        ],
+      },
+      {
+        hotelId: hotel6.id,
+        name: "Panorama Suite",
+        type: "SUITE",
+        pricePerNight: 6800,
+        capacity: 3,
+        floor: 2,
+        totalRooms: 2,
+        description:
+          "Top-floor suite with 270-degree valley and mountain views. Hand-crafted furniture by local Newari artisans.",
+        amenities: [
+          "WiFi",
+          "Hot Water",
+          "Mountain View",
+          "Heater",
+          "Bathtub",
+          "Balcony",
+        ],
+        images: [
+          "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800&q=80",
+        ],
+      },
+
+      // Hotel 7 — Pokhara Grand Boutique Hotel
+      {
+        hotelId: hotel7.id,
+        name: "City View Room",
+        type: "SINGLE",
+        pricePerNight: 4200,
+        capacity: 2,
+        floor: 2,
+        totalRooms: 10,
+        description:
+          "Modern room with Pokhara city views. Walking distance from Phewa Lake, restaurants, and adventure sports operators.",
+        amenities: ["WiFi", "AC", "TV", "Hot Water", "City View"],
+        images: [
+          "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800&q=80",
+        ],
+      },
+      {
+        hotelId: hotel7.id,
+        name: "Annapurna Deluxe",
+        type: "DELUXE",
+        pricePerNight: 8500,
+        capacity: 2,
+        floor: 4,
+        totalRooms: 5,
+        description:
+          "Premium room with direct Annapurna range views. High floor guarantees unobstructed mountain panorama.",
+        amenities: [
+          "WiFi",
+          "AC",
+          "TV",
+          "Hot Water",
+          "Mountain View",
+          "Minibar",
+          "Balcony",
+        ],
+        images: [
+          "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&q=80",
+        ],
+      },
+      {
+        hotelId: hotel7.id,
+        name: "Rooftop Penthouse",
+        type: "PENTHOUSE",
+        pricePerNight: 18000,
+        capacity: 4,
+        floor: 6,
+        totalRooms: 1,
+        description:
+          "Exclusive penthouse with private rooftop terrace, hot tub, and 360-degree views of Pokhara and the Himalayas.",
+        amenities: [
+          "WiFi",
+          "AC",
+          "TV",
+          "Hot Water",
+          "Mountain View",
+          "Hot Tub",
+          "Balcony",
+          "Minibar",
+          "Butler Service",
+        ],
+        images: [
+          "https://images.unsplash.com/photo-1587088407891-249cb8f5e9d8?w=800&q=80",
+        ],
+      },
+
+      // Hotel 8 — Namche Bazaar Everest Lodge
+      {
+        hotelId: hotel8.id,
+        name: "Trekkers Room",
+        type: "SINGLE",
+        pricePerNight: 1800,
+        capacity: 2,
+        floor: 1,
+        totalRooms: 15,
+        description:
+          "No-frills but cozy room built for trekkers. Thick blankets, hot water bottle on request, and early breakfast available from 5am for summit push days.",
+        amenities: ["Hot Water", "Heater", "Mountain View"],
+        images: [
+          "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80",
+        ],
+      },
+      {
+        hotelId: hotel8.id,
+        name: "Sherpa Family Suite",
+        type: "SUITE",
+        pricePerNight: 4500,
+        capacity: 4,
+        floor: 2,
+        totalRooms: 3,
+        description:
+          "Spacious suite built by a Sherpa family with traditional Tibetan decor. Everest and Lhotse visible on clear mornings.",
+        amenities: [
+          "WiFi",
+          "Hot Water",
+          "Heater",
+          "Mountain View",
+          "Fireplace",
+        ],
+        images: [
+          "https://images.unsplash.com/photo-1568495248636-6432b97bd949?w=800&q=80",
+        ],
+      },
+      {
+        hotelId: hotel8.id,
+        name: "Dormitory Bunk",
+        type: "DORMITORY",
+        pricePerNight: 500,
+        capacity: 1,
+        floor: 1,
+        totalRooms: 20,
+        description:
+          "Classic trekkers dormitory at Everest Base Camp trail. Meet fellow adventurers from all over the world.",
+        amenities: ["Hot Water", "Locker", "Heater"],
+        images: [
+          "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&q=80",
+        ],
+      },
+    ],
+  });
 
   // ── Hotels ────────────────────────────────────────────────────────────────
   const hotel1 = await prisma.hotel.upsert({

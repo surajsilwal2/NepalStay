@@ -77,13 +77,17 @@ export default function AdminBookingsPage() {
 
   const issueInvoice = async (id: string) => {
     setWorking(id + "_inv");
-    // Invoice is issued automatically on payment verify; for cash bookings admin can trigger it
-    const res  = await fetch(`/api/bookings/${id}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "CONFIRMED" }),
+    const res = await fetch("/api/admin/invoice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookingId: id }),
     });
     const data = await res.json();
-    if (data.success) toastSuccess("Booking confirmed"); else toastError(data.error);
+    if (data.success) {
+      toastSuccess(`Invoice ${data.data.invoiceNumber} issued (cash payment)`);
+    } else {
+      toastError(data.error);
+    }
     await fetchBookings();
     setWorking(null);
   };
