@@ -31,9 +31,21 @@ type Hotel = {
   longitude: number | null; avgReview: number | null;
 };
 
+type MapHotel = {
+  id: string;
+  slug: string;
+  name: string;
+  city: string;
+  starRating: number;
+  minPrice: number;
+  latitude: number | null;
+  longitude: number | null;
+  avgReview: number | null;
+};
+
 interface Props {
-  hotels: Hotel[];
-  activeHotelId?: string;  // highlight one pin (used on detail page)
+  hotels: MapHotel[];
+  activeHotelId?: string;
   zoom?: number;
   center?: [number, number];
 }
@@ -42,7 +54,9 @@ interface Props {
 const NEPAL_CENTER: [number, number] = [28.3949, 84.1240];
 
 export default function HotelMap({ hotels, activeHotelId, zoom = 7, center }: Props) {
-  const mapped = hotels.filter((h) => h.latitude && h.longitude);
+  const mapped = hotels.filter(
+    (h) => h.latitude !== null && h.longitude !== null,
+  );
 
   // Auto-center on first hotel if only one result
   const mapCenter: [number, number] =
@@ -67,7 +81,7 @@ export default function HotelMap({ hotels, activeHotelId, zoom = 7, center }: Pr
       {mapped.map((hotel) => (
         <Marker
           key={hotel.id}
-          position={[hotel.latitude!, hotel.longitude!]}
+          position={[hotel.latitude as number, hotel.longitude as number]}
           icon={hotel.id === activeHotelId ? activeIcon : icon}
         >
           <Popup>
@@ -85,10 +99,13 @@ export default function HotelMap({ hotels, activeHotelId, zoom = 7, center }: Pr
                 )}
               </div>
               <p className="text-xs text-slate-600 mt-1">
-                from <strong>NPR {hotel.minPrice.toLocaleString()}</strong>/night
+                from <strong>NPR {hotel.minPrice.toLocaleString()}</strong>
+                /night
               </p>
-              <Link href={`/hotels/${hotel.slug}`}
-                className="mt-2 inline-block text-xs px-3 py-1.5 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600 transition-colors">
+              <Link
+                href={`/hotels/${hotel.slug}`}
+                className="mt-2 inline-block text-xs px-3 py-1.5 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600 transition-colors"
+              >
                 View Hotel →
               </Link>
             </div>

@@ -86,6 +86,8 @@ model User {
   avatar    String?
   address   String?
   isActive  Boolean  @default(true)
+  loyaltyPoints    Int      @default(0)
+loyaltyTier      String   @default("BRONZE")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -172,6 +174,8 @@ model Room {
   images        String[]
   isActive      Boolean    @default(true)
 
+  peakMultiplier   Float    @default(1.0)
+
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
@@ -193,6 +197,11 @@ model Booking {
   hotel     Hotel         @relation(fields: [hotelId], references: [id])
   roomId    String
   room      Room          @relation(fields: [roomId], references: [id])
+
+  pointsEarned     Int?
+pointsRedeemed   Int?
+discountAmount   Float?   @default(0)
+carbonKg         Float?
 
   checkIn   DateTime
   stripeSessionId String?

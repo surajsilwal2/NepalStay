@@ -6,6 +6,8 @@ import SessionProvider  from "@/components/providers/SessionProvider";
 import { CalendarProvider } from "@/components/providers/CalendarContext";
 import { ToastProvider }   from "@/components/providers/ToastContext";
 import "./globals.css";
+import { CompareProvider } from "@/components/features/CompareContext";
+import CompareBar from "@/components/features/CompareBar";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -40,7 +42,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <SessionProvider session={session}>
           <CalendarProvider>
             <ToastProvider>
-              {children}
+              <CompareProvider>
+                {children}
+                {/* Floating compare bar — appears when hotels are added to compare */}
+                <CompareBar />
+                </CompareProvider>
             </ToastProvider>
           </CalendarProvider>
         </SessionProvider>
