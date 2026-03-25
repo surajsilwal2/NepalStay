@@ -66,7 +66,8 @@ export default function AvailabilityCalendar({ roomId, roomName }: Props) {
 
   const getDayStatus = (day: number) => {
     const date = new Date(year, month, day);
-    const key = date.toISOString().split("T")[0];
+    // Build YYYY-MM-DD from local date parts to match API's UTC date strings
+    const key = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     if (date < today) return "past";
     if (booked.has(key)) return "booked";
     return "available";
