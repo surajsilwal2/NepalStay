@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { generateInvoiceNumber } from "@/lib/booking";
+import { triggerBookingSMS } from "@/lib/trigger-sms";
 
 export async function POST(req: NextRequest) {
   try {
@@ -129,6 +130,10 @@ export async function POST(req: NextRequest) {
         data: { pointsEarned },
       });
     }
+
+    // Fire SMS notification (non-blocking)
+    
+    triggerBookingSMS(bookingId, "PAYMENT");
 
     return NextResponse.json({
       success: true,
