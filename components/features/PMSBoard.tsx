@@ -151,7 +151,7 @@ function RoomDetailPanel({
             <div className="flex justify-between">
               <span className="text-slate-500">Last Status Change</span>
               <span className="text-slate-600 text-xs">
-                {new Date(room.lastStatusChange).toLocaleString("en-NP", {
+                {new Date(room.lastStatusChange).toLocaleString("en", {
                   day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
                 })}
               </span>

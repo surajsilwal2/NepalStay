@@ -54,7 +54,7 @@ const PURPOSE_OPTIONS: { value: Purpose; label: string; icon: string }[] = [
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-NP", {
+  return new Date(iso).toLocaleDateString("en", {
     day: "numeric", month: "short", year: "numeric",
   });
 }
@@ -222,6 +222,12 @@ export default function ItineraryPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ startDate, totalNights, cities: selectedCities, budget, purpose }),
       });
+
+       if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${res.status}`);
+      }
+      
       const json = await res.json();
       if (json.success) {
         setResult(json.data);

@@ -276,19 +276,25 @@ export default function AnalyticsDashboard() {
           </ChartCard>
 
           {/* Bookings by Day — Bar chart */}
-          <ChartCard title="Bookings by Day (Last 30 Days)">
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={bookingsByDay.filter((_, i) => i % 3 === 0)}
-                margin={{ top: 4, right: 8, left: -8, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="bookings" name="Bookings" fill={AMBER} radius={[3, 3, 0, 0]} maxBarSize={28} />
-                <Bar dataKey="revenue" name="Revenue" fill={SLATE2} radius={[3, 3, 0, 0]} maxBarSize={28} hide />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
+          <ChartCard title="Peak Booking Days (by Day of Week)">
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={peakDays} margin={{ top: 4, right: 8, left: -8, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="day" tick={{ fontSize: 12, fill: "#64748b" }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+              <Tooltip content={<CustomTooltip />} />
+              <Bar dataKey="bookings" name="Bookings" radius={[4, 4, 0, 0]} maxBarSize={48}>
+                {peakDays.map((entry, i) => (
+                  <Cell key={i} fill={AMBER} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          <p className="text-xs text-slate-400 mt-2">
+            <span className="inline-block w-3 h-3 rounded-sm bg-amber-400 mr-1 align-middle" />
+            Peak day highlighted in amber
+          </p>
+        </ChartCard>
         </div>
 
         {/* ── Row 2: Horizontal Bar + Pie + Donut ── */}

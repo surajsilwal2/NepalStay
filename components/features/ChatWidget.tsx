@@ -156,6 +156,11 @@ export default function ChatWidget() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text, history }),
       });
+
+      if (!res.ok) {
+       throw new Error(`HTTP ${res.status}`);
+      }
+      
       const data = await res.json();
 
       const botMsg: Message = {
