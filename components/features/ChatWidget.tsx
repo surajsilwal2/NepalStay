@@ -145,60 +145,67 @@ export default function ChatWidget() {
     setInput("");
     setIsTyping(true);
 
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 20000);
     try {
       // Build history (exclude welcome msg and hotel data for context)
       const history = messages
-        .filter(m => m.id !== "welcome")
-        .map(m => ({ role: m.role, content: m.content }));
-
+        .filter((m) => m.id !== "welcome")
+        .map((m) => ({ role: m.role, content: m.content }));
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text, history }),
+        signal: controller.signal,
       });
-
       if (!res.ok) {
-       throw new Error(`HTTP ${res.status}`);
+        throw new Error(`HTTP ${res.status}`);
       }
-      
-      const data = await res.json();
 
+      const data = await res.json();
       const botMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
         content: data.reply || "I couldn't get a response. Please try again.",
         hotels: data.hasHotels ? data.hotels : undefined,
       };
-      setMessages(prev => [...prev, botMsg]);
-    } catch {
-      setMessages(prev => [
+      setMessages((prev) => [...prev, botMsg]);
+    } catch (error) {
+      setMessages((prev) => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: "Sorry, I'm having trouble connecting. Please try again.",
+          content:
+            error instanceof DOMException && error.name === "AbortError"
+              ? "The chat request timed out. Please try again."
+              : "Sorry, I'm having trouble connecting. Please try again.",
         },
       ]);
     } finally {
+      window.clearTimeout(timeoutId);
       setIsTyping(false);
     }
   }, [input, isTyping, messages]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
+ const handleKeyDown = (e: React.KeyboardEvent) => {
+   if (e.nativeEvent.isComposing) return;
+   if (e.key === "Enter" && !e.shiftKey) {
+     e.preventDefault();
+     sendMessage();
+   }
+ };
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
-
       {/* ─── Expanded panel ─── */}
       {isOpen && (
         <div
           className="flex flex-col bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden"
-          style={{ width: "380px", height: "520px" }}
+          style={{
+            width: "min(380px, calc(100vw - 1.5rem))",
+            height: "min(520px, calc(100vh - 6rem))",
+          }}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 bg-amber-500">
@@ -221,7 +228,7 @@ export default function ChatWidget() {
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-slate-50">
-            {messages.map(msg => (
+            {messages.map((msg) => (
               <MessageBubble key={msg.id} msg={msg} />
             ))}
             {isTyping && (
@@ -242,7 +249,7 @@ export default function ChatWidget() {
                 ref={inputRef}
                 type="text"
                 value={input}
-                onChange={e => setInput(e.target.value)}
+                onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask about hotels, travel tips…"
                 disabled={isTyping}
@@ -253,10 +260,11 @@ export default function ChatWidget() {
                 disabled={!input.trim() || isTyping}
                 className="w-8 h-8 flex items-center justify-center rounded-lg bg-amber-500 hover:bg-amber-600 disabled:bg-amber-200 text-white transition-colors flex-shrink-0"
               >
-                {isTyping
-                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  : <Send className="w-3.5 h-3.5" />
-                }
+                {isTyping ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Send className="w-3.5 h-3.5" />
+                )}
               </button>
             </div>
           </div>
@@ -265,14 +273,16 @@ export default function ChatWidget() {
 
       {/* ─── Floating toggle button ─── */}
       <button
-        onClick={() => setIsOpen(prev => !prev)}
+        onClick={() => setIsOpen((prev) => !prev)}
+        aria-expanded={isOpen}
         className="w-14 h-14 bg-amber-500 hover:bg-amber-600 text-white rounded-full shadow-lg shadow-amber-300 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-        aria-label="Open AI chat assistant"
+        aria-label={isOpen ? "Close AI chat assistant" : "Open AI chat assistant"}
       >
-        {isOpen
-          ? <X className="w-6 h-6" />
-          : <MessageCircle className="w-6 h-6" />
-        }
+        {isOpen ? (
+          <X className="w-6 h-6" />
+        ) : (
+          <MessageCircle className="w-6 h-6" />
+        )}
       </button>
     </div>
   );
