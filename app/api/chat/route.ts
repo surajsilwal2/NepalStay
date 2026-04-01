@@ -167,12 +167,15 @@ export async function POST(req: NextRequest) {
 
     // Check if Anthropic API key is configured
     if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json({
-        success: true,
-        reply:
-          "I'm sorry, the AI assistant is not configured yet. Please contact the administrator to set up the ANTHROPIC_API_KEY.",
-        hotels: [],
-      });
+      console.error("[CHAT_API] ANTHROPIC_API_KEY is not set in server environment");
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Anthropic API key is not configured on the server. Please set ANTHROPIC_API_KEY and restart the server.",
+        },
+        { status: 500 },
+      );
     }
 
     // Check if user is asking about hotels — fetch relevant hotels first
@@ -252,18 +255,26 @@ If no hotels were found, suggest the user refine their search or try different f
     if (!response.ok) {
       const err = await response.text();
       console.error("[CHAT_API]", response.status, err);
-      return NextResponse.json({
-        success: true,
-        reply:
-          "I'm having trouble connecting right now. Please try again in a moment.",
-        hotels: [],
-      });
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "AI backend returned an error while generating the response. Try again later.",
+        },
+        { status: 502 },
+      );
     }
 
     const data = await response.json();
-    const reply =
-      data.content?.[0]?.text ||
-      "I couldn't generate a response. Please try again.";
+    const reply = data.content?.[0]?.text ?? null;
+
+    if (!reply) {
+      console.error("[CHAT_API] no reply in Anthropic response", data);
+      return NextResponse.json(
+        { success: false, error: "AI did not return a valid reply." },
+        { status: 502 },
+      );
+    }
 
     return NextResponse.json({
       success: true,

@@ -7,9 +7,10 @@ import { CalendarProvider } from "@/components/providers/CalendarContext";
 import { ToastProvider }   from "@/components/providers/ToastContext";
 import "./globals.css";
 import { CompareProvider } from "@/components/features/CompareContext";
-import CompareBar from "@/components/features/CompareBar";
-import ServiceWorkerRegister from "@/components/features/ServiceWorkerRegister";
-import ChatWidget from "@/components/features/ChatWidget";
+import dynamic from "next/dynamic";
+const CompareBar = dynamic(() => import("@/components/features/CompareBar"), { ssr: false });
+const ServiceWorkerRegister = dynamic(() => import("@/components/features/ServiceWorkerRegister"), { ssr: false });
+const ChatWidget = dynamic(() => import("@/components/features/ChatWidget"), { ssr: false });
 
 const inter = Inter({ subsets: ["latin"] });
 
