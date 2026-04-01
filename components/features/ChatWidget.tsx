@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { MessageCircle, X, Send, Star, Bot, User, Loader2 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -28,7 +29,7 @@ function HotelMiniCard({ hotel }: { hotel: HotelCard }) {
       className="flex-shrink-0 w-44 rounded-xl border border-slate-100 bg-white overflow-hidden hover:border-amber-300 hover:shadow-md transition-all"
     >
       {img ? (
-        <img src={img} alt={hotel.name} className="w-full h-24 object-cover" />
+        <Image src={img} alt={hotel.name} width={176} height={96} className="w-full h-24 object-cover" />
       ) : (
         <div className="w-full h-24 bg-slate-100 flex items-center justify-center">
           <Star className="w-5 h-5 text-slate-300" />
@@ -166,7 +167,8 @@ export default function ChatWidget() {
       const botMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: data.reply || "I couldn't get a response. Please try again.",
+        content:
+          data?.reply || data?.error || "I couldn't get a response. Please try again.",
         hotels: data.hasHotels ? data.hotels : undefined,
       };
       setMessages((prev) => [...prev, botMsg]);

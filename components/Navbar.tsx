@@ -88,70 +88,70 @@ export default function Navbar() {
   return (
     <header className="bg-white border-b border-slate-100 shadow-sm sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        {/* ── Logo ─────────────────────────────────────────────────────── */}
-        <Link
-          href={session ? "/" : "/hotels"}
-          className="flex items-center gap-2"
-        >
-          <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center shadow-sm">
-            <Hotel className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-bold text-slate-800 text-lg tracking-tight">
-            Nepal<span className="text-amber-500">Stay</span>
-          </span>
-        </Link>
+        {/* ── Left group: Logo + Desktop nav ───────────────────────────── */}
+        <div className="flex items-center gap-6">
+          <Link
+            href={session ? "/" : "/hotels"}
+            className="flex items-center gap-2"
+          >
+            <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center shadow-sm">
+              <Hotel className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-bold text-slate-800 text-lg tracking-tight">
+              Nepal<span className="text-amber-500">Stay</span>
+            </span>
+          </Link>
 
-        {/* ── Desktop nav (logged in) ───────────────────────────────────── */}
-        {session?.user && (
-          <nav className="hidden md:flex items-center gap-1">
-            {links.map(({ href, label, icon: Icon }) => (
+          {/* Desktop nav (logged in) */}
+          {session?.user ? (
+            <nav className="hidden md:flex items-center space-x-3 md:space-x-6">
+              {links.map(({ href, label, icon: Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive(href)
+                      ? "bg-amber-50 text-amber-700"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {label}
+                </Link>
+              ))}
+            </nav>
+          ) : (
+            /* Desktop nav (guest / not logged in) */
+            <nav className="hidden md:flex items-center space-x-3 md:space-x-6">
               <Link
-                key={href}
-                href={href}
+                href="/hotels"
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive(href)
+                  isActive("/hotels")
                     ? "bg-amber-50 text-amber-700"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-800"
                 }`}
               >
-                <Icon className="w-4 h-4" />
-                {label}
+                <Search className="w-4 h-4" />
+                Browse Hotels
               </Link>
-            ))}
-          </nav>
-        )}
 
-        {/* ── Desktop nav (guest / not logged in) ─────────────────────── */}
-        {!session?.user && (
-          <nav className="hidden md:flex items-center gap-1">
-            <Link
-              href="/hotels"
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive("/hotels")
-                  ? "bg-amber-50 text-amber-700"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-800"
-              }`}
-            >
-              <Search className="w-4 h-4" />
-              Browse Hotels
-            </Link>
-
-            <Link
-              href="/stats"
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive("/stats")
-                  ? "bg-amber-50 text-amber-700"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-800"
-              }`}
-            >
-              <BarChart2 className="w-4 h-4" />
-              Statistics
-            </Link>
-          </nav>
-        )}
+              <Link
+                href="/stats"
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive("/stats")
+                    ? "bg-amber-50 text-amber-700"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+                }`}
+              >
+                <BarChart2 className="w-4 h-4" />
+                Statistics 
+              </Link>
+            </nav>
+          )}
+        </div>
 
         {/* ── Right side ───────────────────────────────────────────────── */}
-        <div className="flex items-center gap-2">
+  <div className="flex items-center space-x-3 md:space-x-4">
           {/* BS/AD calendar toggle — visible to everyone */}
           <button
             onClick={toggleCalendar}
@@ -170,7 +170,7 @@ export default function Navbar() {
           {session?.user ? (
             /* ── Logged-in right side ──────────────────────────────────── */
             <>
-              <div className="hidden sm:flex items-center gap-2 ml-1">
+              <div className="hidden sm:flex items-center space-x-3 ml-1">
                 {(session.user as any).avatar ? (
                   <Image
                     src={(session.user as any).avatar}
@@ -206,7 +206,7 @@ export default function Navbar() {
             </>
           ) : (
             /* ── Guest right side ──────────────────────────────────────── */
-            <div className="hidden sm:flex items-center gap-2">
+            <div className="hidden sm:flex items-center space-x-3">
               <Link
                 href="/login"
                 className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 transition-colors"

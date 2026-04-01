@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   MapPin, Moon, Wallet, Compass, Calendar, ChevronRight, ArrowLeft,
   Navigation, Star, Loader2, CheckSquare, Square, Sparkles, ArrowRight,
@@ -66,7 +67,7 @@ function HotelCard({ hotel }: { hotel: HotelSuggestion }) {
   return (
     <div className="flex-shrink-0 w-56 bg-white border border-slate-100 rounded-2xl overflow-hidden hover:border-amber-200 hover:shadow-md transition-all">
       {img ? (
-        <img src={img} alt={hotel.name} className="w-full h-32 object-cover" />
+        <Image src={img} alt={hotel.name} width={224} height={128} className="w-full h-32 object-cover" />
       ) : (
         <div className="w-full h-32 bg-slate-100 flex items-center justify-center">
           <Star className="w-8 h-8 text-slate-300" />
