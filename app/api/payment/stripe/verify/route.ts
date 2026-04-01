@@ -4,7 +4,6 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import Stripe from "stripe";
 import { generateInvoiceNumber } from "@/lib/booking";
-import { triggerBookingSMS } from "@/lib/trigger-sms";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-02-25.clover",
@@ -103,8 +102,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Award loyalty points
-    const { calcPointsEarned, getTier } = await import("@/lib/loyalty");
+    // After prisma.booking.update, add:
+    const { calcPointsEarned, getTier } =
+      await import("@/app/api/loyalty/route");
 
     const user = await prisma.user.findUnique({
       where: { id: booking.userId },
@@ -127,10 +127,7 @@ export async function POST(req: NextRequest) {
         data: { pointsEarned },
       });
     }
-
     
-    triggerBookingSMS(bookingId, "PAYMENT");
-
     return NextResponse.json({
       success: true,
       data: { invoiceNumber },

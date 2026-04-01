@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { generateInvoiceNumber } from "@/lib/booking";
-import { triggerBookingSMS } from "@/lib/trigger-sms";
 
 export async function POST(req: NextRequest) {
   try {
@@ -106,8 +105,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Award loyalty points
-    const { calcPointsEarned, getTier } = await import("@/lib/loyalty");
+    // After prisma.booking.update, add:
+    const { calcPointsEarned, getTier } =
+      await import("@/app/api/loyalty/route");
 
     const user = await prisma.user.findUnique({
       where: { id: booking.userId },
@@ -130,10 +130,6 @@ export async function POST(req: NextRequest) {
         data: { pointsEarned },
       });
     }
-
-    // Fire SMS notification (non-blocking)
-    
-    triggerBookingSMS(bookingId, "PAYMENT");
 
     return NextResponse.json({
       success: true,

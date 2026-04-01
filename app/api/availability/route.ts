@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
       success: true,
       data: {
         roomId,
-        bookedDates: Array.from(new Set(bookedDates)), // deduplicate
+        bookedDates: [...new Set(bookedDates)], // deduplicate
         totalBookings: bookings.length,
         nextAvailable:
           bookedDates.length > 0

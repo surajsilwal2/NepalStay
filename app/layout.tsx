@@ -9,6 +9,7 @@ import "./globals.css";
 import { CompareProvider } from "@/components/features/CompareContext";
 import CompareBar from "@/components/features/CompareBar";
 import ServiceWorkerRegister from "@/components/features/ServiceWorkerRegister";
+import ChatWidget from "@/components/features/ChatWidget";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -48,6 +49,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 {children}
                 {/* Floating compare bar — appears when hotels are added to compare */}
                 <CompareBar />
+                {/* Floating AI chat widget — bottom-right */}
+                <ChatWidget />
               </CompareProvider>
             </ToastProvider>
           </CalendarProvider>
