@@ -153,10 +153,10 @@ export async function GET(req: NextRequest) {
     }));
 
     // Group by floor
-    const floorMap: Record<number, typeof rooms> = {};
+    const floorGroups: Record<number, typeof rooms> = {};
     rooms.forEach((r) => {
-      if (!floorMap[r.floor]) floorMap[r.floor] = [];
-      floorMap[r.floor].push(r);
+      if (!floorGroups[r.floor]) floorGroups[r.floor] = [];
+      floorGroups[r.floor].push(r);
     });
 
     // Current occupancy
@@ -195,10 +195,10 @@ export async function GET(req: NextRequest) {
           upcomingBookings: r.bookings.length,
         })),
         timeline,
-        floorMap: Object.entries(floorMap)
-          .map(([floor, rooms]) => ({
+        floorMap: Object.entries(floorGroups)
+          .map(([floor, floorRooms]) => ({
             floor: parseInt(floor),
-            rooms: rooms.map((r) => ({
+            rooms: floorRooms.map((r) => ({
               id: r.id,
               name: r.name,
               type: r.type,

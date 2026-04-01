@@ -53,8 +53,6 @@ export async function GET(req: NextRequest) {
     const thisMonthRev = revenueThisMonth._sum.totalPrice ?? 0;
     const lastMonthRev = revenueLastMonth._sum.totalPrice ?? 0;
     const revenueGrowth = lastMonthRev > 0 ? ((thisMonthRev - lastMonthRev) / lastMonthRev) * 100 : 0;
-    const refundsAmt = refundsThisMonth._sum.refundAmount ?? 0;
-    const netRevenue = thisMonthRev - refundsAmt;
 
     const roomCounts = rooms.reduce((acc, r) => {
       acc[r.status] = (acc[r.status] || 0) + 1; return acc;

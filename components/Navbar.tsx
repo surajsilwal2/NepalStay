@@ -22,12 +22,16 @@ import {
   Star,
   BarChart2,
   ShieldCheck,
+  TrendingUp,
+  Map,
+  Sparkles,
 } from "lucide-react";
 import { useCalendar } from "@/components/providers/CalendarContext";
 
 const NAV_LINKS = {
   CUSTOMER: [
     { href: "/hotels", label: "Browse", icon: Search },
+    { href: "/itinerary", label: "Planner", icon: Sparkles },
     { href: "/stats", label: "Statistics", icon: BarChart2 },
     { href: "/customer/bookings", label: "My Bookings", icon: CalendarCheck },
     { href: "/customer/wishlist", label: "Wishlist", icon: Heart },
@@ -38,11 +42,13 @@ const NAV_LINKS = {
     { href: "/vendor/hotel", label: "My Hotel", icon: Building2 },
     { href: "/vendor/rooms", label: "Rooms", icon: BedDouble },
     { href: "/vendor/bookings", label: "Bookings", icon: CalendarCheck },
+    { href: "/vendor/analytics", label: "Analytics", icon: TrendingUp },
+    { href: "/vendor/pms", label: "PMS", icon: Map },
     { href: "/vendor/reviews", label: "Reviews", icon: Star },
-    { href: "/stats", label: "Stats", icon: BarChart2 },
   ],
   STAFF: [
     { href: "/staff", label: "Operations", icon: ClipboardList },
+    { href: "/staff/pms", label: "PMS", icon: Map },
     { href: "/hotels", label: "Hotels", icon: BedDouble },
     { href: "/stats", label: "Stats", icon: BarChart2 },
   ],
