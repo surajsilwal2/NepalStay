@@ -3,50 +3,20 @@ import prisma from "@/lib/prisma";
 
 /**
  * POST /api/chat
- * AI chatbot that understands natural language queries about hotels.
- * Uses Claude API (Anthropic) — already available in the project.
- * No extra API key needed beyond ANTHROPIC_API_KEY.
- *
- * Kombai UI will call: POST /api/chat
+ * AI chatbot powered by Groq (llama-3.1-8b-instant — free tier).
  * Body: { message: string, history: Array<{role, content}> }
- * Returns: { reply: string, hotels?: Hotel[], action?: string }
+ * Returns: { reply: string, hotels?: Hotel[], hasHotels: boolean }
  */
 
-// Keywords that suggest the user wants hotel recommendations
 const SEARCH_KEYWORDS = [
-  "hotel",
-  "stay",
-  "book",
-  "room",
-  "night",
-  "accommodation",
-  "guesthouse",
-  "resort",
-  "lodge",
-  "hostel",
-  "sleep",
-  "kathmandu",
-  "pokhara",
-  "chitwan",
-  "nagarkot",
-  "lumbini",
-  "cheap",
-  "budget",
-  "luxury",
-  "affordable",
-  "expensive",
-  "trek",
-  "trekking",
-  "everest",
-  "annapurna",
-  "family",
-  "honeymoon",
-  "couple",
-  "solo",
-  "backpacker",
+  "hotel", "stay", "book", "room", "night", "accommodation",
+  "guesthouse", "resort", "lodge", "hostel", "sleep",
+  "kathmandu", "pokhara", "chitwan", "nagarkot", "lumbini",
+  "cheap", "budget", "luxury", "affordable", "expensive",
+  "trek", "trekking", "everest", "annapurna",
+  "family", "honeymoon", "couple", "solo", "backpacker",
 ];
 
-// Extract search intent from message
 function extractSearchParams(message: string): {
   city?: string;
   maxPrice?: number;
@@ -56,24 +26,12 @@ function extractSearchParams(message: string): {
 } {
   const lower = message.toLowerCase();
 
-  const cities = [
-    "kathmandu",
-    "pokhara",
-    "chitwan",
-    "nagarkot",
-    "lumbini",
-    "namche",
-    "bandipur",
-  ];
+  const cities = ["kathmandu", "pokhara", "chitwan", "nagarkot", "lumbini", "namche", "bandipur"];
   const city = cities.find((c) => lower.includes(c));
 
-  // Price extraction: "under 3000", "below 5000", "less than 2000"
-  const priceMatch = lower.match(
-    /(?:under|below|less than|max|upto|up to)\s*(?:npr\s*)?(\d+)/,
-  );
+  const priceMatch = lower.match(/(?:under|below|less than|max|upto|up to)\s*(?:npr\s*)?(\d+)/);
   const maxPrice = priceMatch ? parseInt(priceMatch[1]) : undefined;
 
-  // Star extraction: "4 star", "5 star", "luxury"
   const starMatch = lower.match(/(\d)\s*star/);
   const minStars = starMatch
     ? parseInt(starMatch[1])
@@ -83,7 +41,6 @@ function extractSearchParams(message: string): {
         ? 1
         : undefined;
 
-  // Property type
   const propertyType = lower.includes("resort")
     ? "Resort"
     : lower.includes("guesthouse")
@@ -96,13 +53,7 @@ function extractSearchParams(message: string): {
             ? "Boutique Hotel"
             : undefined;
 
-  return {
-    city: city ? city.charAt(0).toUpperCase() + city.slice(1) : undefined,
-    maxPrice,
-    minStars,
-    propertyType,
-    keywords: message,
-  };
+  return { city: city ? city.charAt(0).toUpperCase() + city.slice(1) : undefined, maxPrice, minStars, propertyType, keywords: message };
 }
 
 async function searchHotels(params: ReturnType<typeof extractSearchParams>) {
@@ -110,13 +61,9 @@ async function searchHotels(params: ReturnType<typeof extractSearchParams>) {
 
   if (params.city) where.city = { contains: params.city, mode: "insensitive" };
   if (params.minStars) where.starRating = { gte: params.minStars };
-  if (params.propertyType)
-    where.propertyType = { contains: params.propertyType, mode: "insensitive" };
-
+  if (params.propertyType) where.propertyType = { contains: params.propertyType, mode: "insensitive" };
   if (params.maxPrice) {
-    where.rooms = {
-      some: { isActive: true, pricePerNight: { lte: params.maxPrice } },
-    };
+    where.rooms = { some: { isActive: true, pricePerNight: { lte: params.maxPrice } } };
   }
 
   const hotels = await prisma.hotel.findMany({
@@ -124,11 +71,7 @@ async function searchHotels(params: ReturnType<typeof extractSearchParams>) {
     take: 4,
     orderBy: [{ starRating: "desc" }],
     include: {
-      rooms: {
-        where: { isActive: true },
-        orderBy: { pricePerNight: "asc" },
-        take: 1,
-      },
+      rooms: { where: { isActive: true }, orderBy: { pricePerNight: "asc" }, take: 1 },
       reviews: { select: { overallScore: true } },
     },
   });
@@ -144,11 +87,7 @@ async function searchHotels(params: ReturnType<typeof extractSearchParams>) {
     minPrice: h.rooms[0]?.pricePerNight ?? 0,
     avgReview:
       h.reviews.length > 0
-        ? Math.round(
-            (h.reviews.reduce((s, r) => s + r.overallScore, 0) /
-              h.reviews.length) *
-              10,
-          ) / 10
+        ? Math.round((h.reviews.reduce((s, r) => s + r.overallScore, 0) / h.reviews.length) * 10) / 10
         : null,
     amenities: h.amenities.slice(0, 4),
   }));
@@ -159,29 +98,32 @@ export async function POST(req: NextRequest) {
     const { message, history = [] } = await req.json();
 
     if (!message?.trim()) {
-      return NextResponse.json(
-        { success: false, error: "Message required" },
-        { status: 400 },
-      );
+      return NextResponse.json({ success: false, error: "Message required" }, { status: 400 });
     }
 
-    // Check if Anthropic API key is configured
-    if (!process.env.ANTHROPIC_API_KEY) {
-      console.error("[CHAT_API] ANTHROPIC_API_KEY is not set in server environment");
+    // Check Groq API key
+    const groqKey = process.env.GROQ_API_KEY?.trim();
+    if (!groqKey || groqKey.includes("your_free_api_key")) {
+      console.error("[CHAT_API] GROQ_API_KEY not configured. Get a free key at https://console.groq.com");
+      // In development, provide a helpful message
+      if (process.env.NODE_ENV !== "production") {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: "AI service needs setup. Get your FREE Groq API key at https://console.groq.com and add it to .env as GROQ_API_KEY.",
+            setupUrl: "https://console.groq.com"
+          },
+          { status: 503 },
+        );
+      }
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Anthropic API key is not configured on the server. Please set ANTHROPIC_API_KEY and restart the server.",
-        },
+        { success: false, error: "AI service not configured. Please contact support." },
         { status: 500 },
       );
     }
 
-    // Check if user is asking about hotels — fetch relevant hotels first
-    const isHotelQuery = SEARCH_KEYWORDS.some((kw) =>
-      message.toLowerCase().includes(kw),
-    );
+    // Fetch relevant hotels if query is hotel-related
+    const isHotelQuery = SEARCH_KEYWORDS.some((kw) => message.toLowerCase().includes(kw));
     let hotels: any[] = [];
     let hotelContext = "";
 
@@ -199,7 +141,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Build system prompt
     const systemPrompt = `You are NepalStay's friendly AI travel assistant. You help travellers find and book hotels across Nepal.
 
 Your personality:
@@ -229,24 +170,21 @@ ${hotelContext}
 If you found hotels above, mention them naturally in your response. Be specific about prices.
 If no hotels were found, suggest the user refine their search or try different filters.`;
 
-    // Call Claude API
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    // Call Groq API (OpenAI-compatible endpoint)
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
+        "Authorization": `Bearer ${groqKey}`,
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001", // Fast and cheap for chat
+        model: "llama-3.1-8b-instant",
         max_tokens: 500,
-        system: systemPrompt,
+        temperature: 0.7,
         messages: [
-          // Include conversation history (last 6 messages for context)
-          ...history.slice(-6).map((h: any) => ({
-            role: h.role,
-            content: h.content,
-          })),
+          { role: "system", content: systemPrompt },
+          // Include last 6 messages of conversation history
+          ...history.slice(-6).map((h: any) => ({ role: h.role, content: h.content })),
           { role: "user", content: message },
         ],
       }),
@@ -254,40 +192,33 @@ If no hotels were found, suggest the user refine their search or try different f
 
     if (!response.ok) {
       const err = await response.text();
-      console.error("[CHAT_API]", response.status, err);
+      console.error("[CHAT_API] Groq error", response.status, err);
+      
+      // Provide helpful error messages
+      let errorMsg = "AI backend returned an error. Please try again later.";
+      if (response.status === 401) {
+        errorMsg = "Invalid Groq API key. Please check your .env GROQ_API_KEY setting.";
+      } else if (response.status === 429) {
+        errorMsg = "Rate limited. Please wait a moment and try again.";
+      }
+      
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            "AI backend returned an error while generating the response. Try again later.",
-        },
+        { success: false, error: errorMsg },
         { status: 502 },
       );
     }
 
     const data = await response.json();
-    const reply = data.content?.[0]?.text ?? null;
+    const reply = data.choices?.[0]?.message?.content ?? null;
 
     if (!reply) {
-      console.error("[CHAT_API] no reply in Anthropic response", data);
-      return NextResponse.json(
-        { success: false, error: "AI did not return a valid reply." },
-        { status: 502 },
-      );
+      console.error("[CHAT_API] No reply in Groq response", data);
+      return NextResponse.json({ success: false, error: "AI did not return a valid reply." }, { status: 502 });
     }
 
-    return NextResponse.json({
-      success: true,
-      reply,
-      hotels, // Frontend shows hotel cards when present
-      hasHotels: hotels.length > 0,
-    });
+    return NextResponse.json({ success: true, reply, hotels, hasHotels: hotels.length > 0 });
   } catch (error) {
     console.error("[CHAT]", error);
-    return NextResponse.json({
-      success: true,
-      reply: "Something went wrong. Please try again.",
-      hotels: [],
-    });
+    return NextResponse.json({ success: true, reply: "Something went wrong. Please try again.", hotels: [] });
   }
 }

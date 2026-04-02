@@ -112,7 +112,8 @@ export default function VoiceSearch({ onResult, onCity, className = "" }: Props)
     const recognition = new SpeechRecognition();
     recognitionRef.current = recognition;
 
-    recognition.lang = "en-IN";
+    // Configuration for better reliability
+    recognition.lang = "en-US"; // Changed from en-IN for better compatibility
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
@@ -122,6 +123,7 @@ export default function VoiceSearch({ onResult, onCity, className = "" }: Props)
       setPulse(true);
       setTranscript("");
       setErrorMsg(null);
+      setShowFallback(false);
     };
 
     recognition.onresult = (event: any) => {
@@ -136,15 +138,15 @@ export default function VoiceSearch({ onResult, onCity, className = "" }: Props)
     };
 
     recognition.onerror = (event: any) => {
-      console.error("[VOICE] error", event);
+      console.error("[VOICE] error", event.error);
       lastErrorRef.current = event;
       const code = event.error;
 
+      // Network errors: retry once, then show fallback
       if (code === "network" && retryCountRef.current < MAX_RETRIES) {
         retryCountRef.current += 1;
-        const attempt = retryCountRef.current;
-        setErrorMsg(`Network error: retrying (${attempt}/${MAX_RETRIES})...`);
-
+        setErrorMsg("🔄 Network error detected. Retrying...");
+        
         try {
           recognition.stop?.();
         } catch (e) {
@@ -155,41 +157,45 @@ export default function VoiceSearch({ onResult, onCity, className = "" }: Props)
           window.clearTimeout(retryTimerRef.current);
         }
 
+        // Wait before retrying
         retryTimerRef.current = window.setTimeout(() => {
           retryTimerRef.current = null;
-          // create new instance and start
-          const next = createRecognition(true);
-          if (next && typeof next.start === "function") {
-            try {
-              next.start();
-            } catch (e) {
-              console.error("[VOICE] retry start failed", e);
-              setListening(false);
-              setPulse(false);
-              setErrorMsg("Unable to start speech recognition after retry.");
+          setErrorMsg(null);
+          setTranscript("");
+          try {
+            const newRecognition = createRecognition(true);
+            if (!newRecognition) {
+              setErrorMsg("❌ Failed to restart voice recognition");
+              setShowFallback(true);
             }
+          } catch (e) {
+            console.error("[VOICE] retry failed", e);
+            setErrorMsg("❌ Retry failed. Please use text input instead.");
+            setShowFallback(true);
           }
-        }, 700 + attempt * 200);
+        }, 500);
 
         return;
       }
 
+      // After retries exhausted or other errors
       const message =
         code === "not-allowed"
-          ? "Microphone access denied. Please allow microphone permissions and try again."
+          ? "❌ Microphone access denied. Please enable microphone in your browser settings and try again."
           : code === "no-speech"
-          ? "I couldn't hear anything. Please speak clearly and try again."
-          : event.message || "Speech recognition error";
+          ? "🔇 No speech detected. Please speak clearly and try again."
+          : code === "network"
+          ? "📡 Network issue with speech service. Using text input instead."
+          : code === "service-not-available"
+          ? "⚠️ Speech service temporarily unavailable. Try again in a moment."
+          : code === "bad-grammar"
+          ? "📝 Couldn't process your speech. Try again with clearer words."
+          : code === "timeout"
+          ? "⏱️ Request timed out. Please try again."
+          : `Error: ${code}. Please try again.`;
 
-      // If network retries exhausted, show a clear message with actions
-      if (code === "network" && retryCountRef.current >= MAX_RETRIES) {
-        setErrorMsg(
-          `Network error: speech recognition failed after ${MAX_RETRIES} attempts. You can retry or copy diagnostics for debugging.`,
-        );
-        setShowFallback(true);
-      } else {
-        setErrorMsg(message);
-      }
+      setErrorMsg(message);
+      setShowFallback(true);
       setListening(false);
       setPulse(false);
     };
@@ -306,7 +312,7 @@ export default function VoiceSearch({ onResult, onCity, className = "" }: Props)
                   setShowFallback(false);
                   startListening();
                 }}
-                className="text-xs px-2 py-1 bg-slate-100 rounded-md"
+                className="text-xs px-2 py-1 bg-slate-100 rounded-xl"
               >
                 Retry
               </button>
@@ -316,7 +322,7 @@ export default function VoiceSearch({ onResult, onCity, className = "" }: Props)
                     value={fallbackText}
                     onChange={(e) => setFallbackText(e.target.value)}
                     placeholder="Type your search..."
-                    className="text-xs px-2 py-1 rounded-md border border-slate-200"
+                    className="text-xs px-2 py-1 rounded-xl border border-slate-200"
                   />
                   <button
                     onClick={() => {
@@ -327,7 +333,7 @@ export default function VoiceSearch({ onResult, onCity, className = "" }: Props)
                         setErrorMsg(null);
                       }
                     }}
-                    className="text-xs px-2 py-1 bg-emerald-100 rounded-md"
+                    className="text-xs px-2 py-1 bg-emerald-100 rounded-xl"
                   >
                     Send
                   </button>
@@ -349,13 +355,13 @@ export default function VoiceSearch({ onResult, onCity, className = "" }: Props)
                     setTimeout(() => setErrorMsg(null), 1500);
                   }
                 }}
-                className="text-xs px-2 py-1 bg-slate-100 rounded-md"
+                className="text-xs px-2 py-1 bg-slate-100 rounded-xl"
               >
                 Copy diagnostics
               </button>
               <button
                 onClick={() => setErrorMsg(null)}
-                className="text-xs px-2 py-1 bg-slate-100 rounded-md"
+                className="text-xs px-2 py-1 bg-slate-100 rounded-xl"
               >
                 Dismiss
               </button>
