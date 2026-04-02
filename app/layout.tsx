@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -12,7 +12,7 @@ const CompareBar = dynamic(() => import("@/components/features/CompareBar"), { s
 const ServiceWorkerRegister = dynamic(() => import("@/components/features/ServiceWorkerRegister"), { ssr: false });
 const ChatWidget = dynamic(() => import("@/components/features/ChatWidget"), { ssr: false });
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
   title: {
@@ -22,15 +22,21 @@ export const metadata: Metadata = {
   description:
     "Nepal's dedicated hotel booking portal. Search, compare, and book hotels in Kathmandu, Pokhara, Chitwan, and beyond. Khalti & cash payments supported.",
   manifest: "/manifest.json",
-  themeColor: "#f59e0b",
   openGraph: {
     title: "NepalStay",
     description: "Book hotels across Nepal — Khalti payments, BS calendar, FNMIS compliant.",
     type: "website",
   },
-    icons: {
+  icons: {
     icon: "/logo.png",
   },
+};
+
+// Separate viewport export — recommended for Next.js 14 App Router
+export const viewport: Viewport = {
+  themeColor: "#f59e0b",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -39,7 +45,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en">
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#f59e0b" />
+        {/* Preconnect to UploadThing CDN for faster hotel image loading */}
+        <link rel="preconnect" href="https://utfs.io" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://utfs.io" />
       </head>
       <body className={inter.className}>
         <ServiceWorkerRegister />
@@ -48,9 +56,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <ToastProvider>
               <CompareProvider>
                 {children}
-                {/* Floating compare bar — appears when hotels are added to compare */}
                 <CompareBar />
-                {/* Floating AI chat widget — bottom-right */}
                 <ChatWidget />
               </CompareProvider>
             </ToastProvider>

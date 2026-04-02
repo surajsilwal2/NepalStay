@@ -164,6 +164,20 @@ export default function ChatWidget() {
       }
 
       const data = await res.json();
+      
+      // Handle setup errors with clear call-to-action
+      if (!data.success && data.setupUrl) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: "assistant",
+            content: data.error,
+          },
+        ]);
+        return;
+      }
+      
       const botMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
