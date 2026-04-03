@@ -185,11 +185,11 @@ export default function Navbar() {
                   </div>
                 )}
                 <div className="hidden md:block">
-                  <p className="text-sm font-medium text-slate-800 leading-none">
+                  <p className="text-sm font-medium text-slate-800 leading-tight">
                     {session.user.name}
                   </p>
                   <span
-                    className={`text-xs font-medium px-1.5 py-0.5 rounded ${ROLE_BADGE[role]}`}
+                    className={`text-xs font-medium px-1.5 py-0.5 rounded inline-block ${ROLE_BADGE[role]}`}
                   >
                     {role}
                   </span>

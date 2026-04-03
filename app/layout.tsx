@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import SessionProvider  from "@/components/providers/SessionProvider";
 import { CalendarProvider } from "@/components/providers/CalendarContext";
 import { ToastProvider }   from "@/components/providers/ToastContext";
+import { QueryClientProvider } from "@/components/providers/QueryClientProvider";
 import "./globals.css";
 import { CompareProvider } from "@/components/features/CompareContext";
 import dynamic from "next/dynamic";
@@ -52,15 +53,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={inter.className}>
         <ServiceWorkerRegister />
         <SessionProvider session={session}>
-          <CalendarProvider>
-            <ToastProvider>
-              <CompareProvider>
-                {children}
-                <CompareBar />
-                <ChatWidget />
-              </CompareProvider>
-            </ToastProvider>
-          </CalendarProvider>
+          <QueryClientProvider>
+            <CalendarProvider>
+              <ToastProvider>
+                <CompareProvider>
+                  {children}
+                  <CompareBar />
+                  <ChatWidget />
+                </CompareProvider>
+              </ToastProvider>
+            </CalendarProvider>
+          </QueryClientProvider>
         </SessionProvider>
       </body>
     </html>

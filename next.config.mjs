@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+
 const nextConfig = {
   images: {
     remotePatterns: [
@@ -19,6 +20,8 @@ const nextConfig = {
   experimental: {
     optimizeCss: true,
   },
+  // Generate static optimization data
+  staticPageGenerationTimeout: 1000,
 };
 
 export default nextConfig;

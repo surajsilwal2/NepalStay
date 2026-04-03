@@ -221,13 +221,6 @@ export default function StatsPage() {
                 color="blue"
               />
               <StatCard
-                icon={TrendingUp}
-                value={`NPR ${Math.round(stats.overview.revenueThisMonth / 1000)}K`}
-                label="Revenue This Month"
-                sub="Confirmed bookings"
-                color="green"
-              />
-              <StatCard
                 icon={Building2}
                 value={stats.byCity.length}
                 label="Cities Covered"
