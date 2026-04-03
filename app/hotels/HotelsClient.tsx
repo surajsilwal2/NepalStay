@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import dynamic from "next/dynamic";
-import VoiceSearch from "@/components/features/VoiceSearch";
 import SeasonBadge from "@/components/features/SeasonBadge";
 import { useCompare } from "@/components/features/CompareContext";
 
@@ -85,7 +84,6 @@ export default function HotelsClient() {
   const [hasMore, setHasMore] = useState(false);
   const [view, setView] = useState<"grid" | "map">("grid");
   const [showFilters, setShowFilters] = useState(false);
-  const [showVoice, setShowVoice] = useState(false);
 
   // Filters
   const [q, setQ] = useState("");
@@ -182,15 +180,6 @@ export default function HotelsClient() {
             {CITIES.map((c) => <option key={c}>{c}</option>)}
           </select>
 
-          {/* Voice search toggle */}
-          <button
-            onClick={() => setShowVoice((v) => !v)}
-            className={`p-2 rounded-xl border transition-colors ${showVoice ? "bg-amber-500 text-white border-amber-500" : "border-slate-200 text-slate-500 hover:border-amber-400"}`}
-            title="Voice search"
-          >
-            🎤
-          </button>
-
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${hasFilters ? "bg-amber-500 text-white border-amber-500" : "border-slate-200 text-slate-600 hover:border-amber-400"}`}
@@ -233,19 +222,6 @@ export default function HotelsClient() {
             </button>
           </div>
         </div>
-
-        {/* Voice search panel */}
-        {showVoice && (
-          <div className="max-w-7xl mx-auto px-4 pb-4 pt-2 border-t border-slate-100 flex items-center justify-center">
-            <VoiceSearch
-              onResult={(text) => setQ(text)}
-              onCity={(detectedCity) => {
-                const match = CITIES.find((c) => c.toLowerCase() === detectedCity.toLowerCase());
-                if (match) setCity(match);
-              }}
-            />
-          </div>
-        )}
 
         {/* Expanded filters */}
         {showFilters && (

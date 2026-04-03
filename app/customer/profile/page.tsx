@@ -46,7 +46,12 @@ export default function ProfilePage() {
     });
     const json = await res.json();
     if (!json.success) { toastError(json.error); return; }
-    await update({ name: data.name });
+    // Update session with new data and trigger revalidation
+    await update({ 
+      name: data.name,
+      phone: data.phone,
+      address: data.address,
+    });
     toastSuccess("Profile updated successfully");
   };
 

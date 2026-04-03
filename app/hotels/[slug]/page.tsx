@@ -517,7 +517,7 @@ export default function HotelDetailPage() {
           {/* Right — sticky sidebar */}
           <div className="space-y-4">
             {/* Contact card */}
-            <div className="bg-white rounded-2xl border border-slate-100 p-5 sticky top-24">
+            <div className="bg-white rounded-2xl border border-slate-100 p-5 sticky top-20 z-20">
               <h3 className="font-bold text-slate-800 mb-3">Contact Hotel</h3>
               <div className="space-y-2">
                 {hotel.contactPhone && (

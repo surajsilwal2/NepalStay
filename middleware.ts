@@ -1,5 +1,15 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+// Security headers configuration
+const securityHeaders = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+};
 
 export default withAuth(
   function middleware(req) {
@@ -27,7 +37,23 @@ export default withAuth(
       return NextResponse.redirect(new URL("/unauthorized", req.url));
     }
 
-    return NextResponse.next();
+    const response = NextResponse.next();
+
+    // Add security headers
+    Object.entries(securityHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
+
+    // Add cache headers based on path
+    if (pathname.startsWith('/api')) {
+      response.headers.set('Cache-Control', 'no-store, max-age=0');
+    } else if (pathname.startsWith('/static')) {
+      response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+    } else {
+      response.headers.set('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+    }
+
+    return response;
   },
   {
     callbacks: { authorized: ({ token }) => !!token },
