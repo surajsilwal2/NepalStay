@@ -49,8 +49,6 @@ const NAV_LINKS = {
   STAFF: [
     { href: "/staff", label: "Operations", icon: ClipboardList },
     { href: "/staff/pms", label: "PMS", icon: Map },
-    { href: "/hotels", label: "Hotels", icon: BedDouble },
-    { href: "/stats", label: "Stats", icon: BarChart2 },
   ],
   ADMIN: [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -104,28 +102,28 @@ export default function Navbar() {
 
           {/* Desktop nav (logged in) */}
           {session?.user ? (
-            <nav className="hidden md:flex items-center space-x-3 md:space-x-6">
+            <nav className="hidden md:flex items-center gap-0.5 overflow-x-auto">
               {links.map(({ href, label, icon: Icon }) => (
                 <Link
                   key={href}
                   href={href}
-                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
                     isActive(href)
                       ? "bg-amber-50 text-amber-700"
                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-800"
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-4 h-4 flex-shrink-0" />
                   {label}
                 </Link>
               ))}
             </nav>
           ) : (
             /* Desktop nav (guest / not logged in) */
-            <nav className="hidden md:flex items-center space-x-3 md:space-x-6">
+            <nav className="hidden md:flex items-center gap-0.5">
               <Link
                 href="/hotels"
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
                   isActive("/hotels")
                     ? "bg-amber-50 text-amber-700"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-800"
@@ -137,7 +135,7 @@ export default function Navbar() {
 
               <Link
                 href="/stats"
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
                   isActive("/stats")
                     ? "bg-amber-50 text-amber-700"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-800"

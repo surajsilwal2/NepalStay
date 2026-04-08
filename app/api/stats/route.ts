@@ -18,7 +18,6 @@ export async function GET(req: NextRequest) {
       lastMonthBookings,
       cityStats,
       typeStats,
-      revenueData,
       foreignGuestCount,
       topHotels,
     ] = await Promise.all([
@@ -57,15 +56,6 @@ export async function GET(req: NextRequest) {
         where: { status: "APPROVED" },
         _count: { id: true },
         orderBy: { _count: { id: "desc" } },
-      }),
-
-      // Revenue this month
-      prisma.booking.aggregate({
-        where: {
-          createdAt: { gte: monthStart },
-          paymentStatus: "PAID",
-        },
-        _sum: { totalPrice: true },
       }),
 
       // Foreign guest count (FNMIS)
@@ -114,7 +104,6 @@ export async function GET(req: NextRequest) {
           monthBookings,
           bookingGrowth,
           foreignGuests: foreignGuestCount,
-          revenueThisMonth: revenueData._sum.totalPrice ?? 0,
         },
         byCity: cityStats.map((c) => ({ city: c.city, hotels: c._count.id })),
         byType: typeStats.map((t) => ({

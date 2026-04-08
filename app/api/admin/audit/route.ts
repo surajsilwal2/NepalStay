@@ -43,7 +43,7 @@ Please generate a concise executive summary (2-3 sentences) highlighting key ins
         "Authorization": `Bearer ${groqKey}`,
       },
       body: JSON.stringify({
-        model: "mixtral-8x7b-32768",
+        model: "llama-3.1-8b-instant",
         messages: [
           {
             role: "system",

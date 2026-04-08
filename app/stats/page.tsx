@@ -39,7 +39,6 @@ type Stats = {
     monthBookings: number;
     bookingGrowth: number;
     foreignGuests: number;
-    revenueThisMonth: number;
   };
   byCity: Array<{ city: string; hotels: number }>;
   byType: Array<{ type: string; count: number }>;
