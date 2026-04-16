@@ -8,6 +8,8 @@ import { useCalendar } from "@/components/providers/CalendarContext";
 import { useToast } from "@/components/providers/ToastContext";
 import { adToBS, formatBSShort } from "@/lib/nepali-date";
 
+export const dynamic = "force-dynamic";
+
 type AuditData = {
   period:   { from: string; to: string; fromBS: string; toBS: string; fiscalYear: string };
   summary:  { grossRevenue: number; totalRefunds: number; netRevenue: number; invoiceCount: number; refundCount: number };

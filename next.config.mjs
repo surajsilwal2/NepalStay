@@ -17,11 +17,12 @@ const nextConfig = {
   poweredByHeader: false,
   // Enable gzip compression
   compress: true,
+  // Disable experimental CSS optimization to prevent build hangs
   experimental: {
-    optimizeCss: true,
+    optimizeCss: false,
   },
-  // Generate static optimization data
-  staticPageGenerationTimeout: 1000,
+  // Increase timeout for page data collection
+  staticPageGenerationTimeout: 600,
 };
 
 export default nextConfig;

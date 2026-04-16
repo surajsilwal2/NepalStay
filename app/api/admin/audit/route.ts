@@ -4,6 +4,9 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { adToBS, formatBSShort, getNepalisFiscalYear } from "@/lib/nepali-date";
 
+// Mark this route as dynamic since it requires runtime data
+export const dynamic = "force-dynamic";
+
 async function generateReportSummaryWithGroq(data: any): Promise<string> {
   try {
     const groqKey = process.env.GROQ_API_KEY;
