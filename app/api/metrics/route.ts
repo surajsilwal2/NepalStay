@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as Sentry from '@sentry/nextjs';
 
+export const dynamic = "force-dynamic";
+
 export interface MetricData {
   name: string;
   value: number;

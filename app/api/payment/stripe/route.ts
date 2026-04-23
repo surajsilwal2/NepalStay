@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import Stripe from "stripe";
 
+export const dynamic = "force-dynamic";
+
 // Single Stripe instance — consistent version across the whole app
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-02-25.clover",

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/cron/fnmis-check
  * Call this route every hour via a cron service (e.g. Vercel cron, uptime robot).

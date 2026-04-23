@@ -6,6 +6,8 @@ import { z } from "zod";
 import { calculateTotalPrice, calculateNights } from "@/lib/booking";
 import { differenceInCalendarDays, addDays } from "date-fns";
 
+export const dynamic = "force-dynamic";
+
 const schema = z.object({
   hotelId:          z.string(),
   roomId:           z.string(),

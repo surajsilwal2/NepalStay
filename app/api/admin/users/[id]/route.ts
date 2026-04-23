@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 const schema = z.object({
   role:     z.enum(["CUSTOMER","VENDOR","STAFF","ADMIN"]).optional(),
   isActive: z.boolean().optional(),

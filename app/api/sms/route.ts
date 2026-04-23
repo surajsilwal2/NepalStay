@@ -12,6 +12,8 @@ import {
 } from "@/lib/sms";
 import { format } from "date-fns";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/sms
  * Triggers SMS for a booking event.

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 /**
  * POST /api/chat
  * AI chatbot powered by Groq (llama-3.1-8b-instant — free tier).
