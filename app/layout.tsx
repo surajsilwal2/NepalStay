@@ -8,10 +8,13 @@ import { ToastProvider }   from "@/components/providers/ToastContext";
 import { QueryClientProvider } from "@/components/providers/QueryClientProvider";
 import "./globals.css";
 import { CompareProvider } from "@/components/features/CompareContext";
-import dynamic from "next/dynamic";
-const CompareBar = dynamic(() => import("@/components/features/CompareBar"), { ssr: false });
-const ServiceWorkerRegister = dynamic(() => import("@/components/features/ServiceWorkerRegister"), { ssr: false });
-const ChatWidget = dynamic(() => import("@/components/features/ChatWidget"), { ssr: false });
+import dynamicLib from "next/dynamic";
+
+export const dynamic = "force-dynamic";
+
+const CompareBar = dynamicLib(() => import("@/components/features/CompareBar"), { ssr: false });
+const ServiceWorkerRegister = dynamicLib(() => import("@/components/features/ServiceWorkerRegister"), { ssr: false });
+const ChatWidget = dynamicLib(() => import("@/components/features/ChatWidget"), { ssr: false });
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 
