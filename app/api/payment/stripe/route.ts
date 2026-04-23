@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const appUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const appUrl = process.env.NEXTAUTH_URL || "https://nepal-stay.vercel.app";
 
     // Convert NPR → USD cents (1 USD ≈ 133 NPR, fixed rate for demo)
     const amountInCents = Math.max(

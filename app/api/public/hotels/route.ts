@@ -127,7 +127,7 @@ export async function GET(req: NextRequest) {
           starRating: h.starRating,
           minPrice,
           avgReview,
-          bookingUrl: `${process.env.NEXTAUTH_URL || "https://nepalstay.com"}/hotels/${h.slug}`,
+          bookingUrl: `${process.env.NEXTAUTH_URL || "https://nepal-stay.vercel.app"}/hotels/${h.slug}`,
         };
       }
 
@@ -150,7 +150,7 @@ export async function GET(req: NextRequest) {
         avgReview,
         reviewCount: h._count.reviews,
         rooms: h.rooms,
-        bookingUrl: `${process.env.NEXTAUTH_URL || "https://nepalstay.com"}/hotels/${h.slug}`,
+        bookingUrl: `${process.env.NEXTAUTH_URL || "https://nepal-stay.vercel.app"}/hotels/${h.slug}`,
         policies: h.policies,
       };
     });

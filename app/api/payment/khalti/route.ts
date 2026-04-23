@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     }
     //
 
-    const appUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const appUrl = process.env.NEXTAUTH_URL || "https://nepal-stay.vercel.app";
     const amountPaisa = Math.round(booking.totalPrice * 100);
     // NEW — explicit env variable controls which URL to use
     const khaltiBase =
