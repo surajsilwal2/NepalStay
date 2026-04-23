@@ -4,6 +4,9 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { startOfMonth, endOfMonth, subMonths } from "date-fns";
 
+// This route uses session/headers at runtime — force dynamic to avoid prerender
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);

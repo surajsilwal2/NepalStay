@@ -3,6 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
+// Staff routes rely on session info — force dynamic
+export const dynamic = 'force-dynamic';
+
 // GET /api/staff/rooms — rooms for staff's assigned hotel ONLY
 export async function GET(req: NextRequest) {
   try {

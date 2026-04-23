@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+// Reads request URL/search params at runtime — force dynamic
+export const dynamic = 'force-dynamic';
+
 // GET /api/availability?roomId=xxx&months=3
 // Returns booked date ranges for a room so the calendar can show them
 export async function GET(req: NextRequest) {

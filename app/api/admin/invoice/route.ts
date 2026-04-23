@@ -69,7 +69,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-
     const updated = await prisma.booking.update({
       where: { id: bookingId },
       data: {

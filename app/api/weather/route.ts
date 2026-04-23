@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 // wttr.in is completely free, no API key, no rate limit for reasonable use
 // Returns weather for any city in Nepal
 
+// Reads request.url and calls external weather API — force dynamic
+export const dynamic = 'force-dynamic';
+
 const WEATHER_ICONS: Record<string, string> = {
   "113": "☀️", // Sunny
   "116": "⛅", // Partly Cloudy

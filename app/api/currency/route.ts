@@ -6,6 +6,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 const NPR_PER_USD = 133; // approximate, update manually if needed
 
+// Uses request URL search params and external fetch — force dynamic
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);

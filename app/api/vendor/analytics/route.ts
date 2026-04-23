@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+
+// Uses headers/session — force dynamic
+export const dynamic = 'force-dynamic';
 import {
   startOfMonth,
   endOfMonth,

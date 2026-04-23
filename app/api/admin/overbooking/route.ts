@@ -4,6 +4,9 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { addDays } from "date-fns";
 
+// Uses session/headers to scope vendor/admin — force dynamic
+export const dynamic = 'force-dynamic';
+
 // GET /api/admin/overbooking
 // Returns hotels at high occupancy risk in the next 30 days
 export async function GET(req: NextRequest) {

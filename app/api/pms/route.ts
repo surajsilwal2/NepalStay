@@ -4,6 +4,9 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { addDays, format } from "date-fns";
 
+// Uses session and dynamic hotel data — force dynamic
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/pms
  * Returns full PMS (Property Management System) room grid data.
