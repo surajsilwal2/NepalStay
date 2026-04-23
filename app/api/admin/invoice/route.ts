@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { generateInvoiceNumber } from "@/lib/booking";
 
+export const dynamic = "force-dynamic";
+
 // POST /api/admin/invoice — issue invoice for cash payment bookings
 export async function POST(req: NextRequest) {
   try {
