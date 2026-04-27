@@ -6,6 +6,8 @@ Tribhuvan University · Bhairahawa Multiple Campus
 A full-stack hotel booking marketplace built for Nepal's hospitality market.
 Search, compare, and book hotels across Kathmandu, Pokhara, Chitwan, and beyond.
 
+Live demo: [nepal-stay.vercel.app](https://nepal-stay.vercel.app)
+
 ---
 
 ## Tech Stack
