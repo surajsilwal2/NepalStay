@@ -73,11 +73,14 @@ export async function POST(req: NextRequest) {
 
     const appUrl = process.env.NEXTAUTH_URL || "https://nepal-stay.vercel.app";
     const amountPaisa = Math.round(booking.totalPrice * 100);
-    // NEW — explicit env variable controls which URL to use
+    // Use KHALTI_BASE_URL env var to control sandbox vs live independently of NODE_ENV.
+    // Set KHALTI_BASE_URL=https://a.khalti.com on Vercel while using a test key,
+    // or KHALTI_BASE_URL=https://khalti.com when you have a live key.
     const khaltiBase =
-      process.env.NODE_ENV === "production"
+      process.env.KHALTI_BASE_URL ||
+      (process.env.NODE_ENV === "production"
         ? "https://khalti.com"
-        : "https://a.khalti.com";
+        : "https://a.khalti.com");
 
     const payload = {
       return_url: `${appUrl}/payment/success?bookingId=${booking.id}`,

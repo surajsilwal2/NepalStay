@@ -7,9 +7,12 @@ import { generateInvoiceNumber } from "@/lib/booking";
 
 export const dynamic = "force-dynamic";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-02-25.clover",
-});
+function initStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("STRIPE_SECRET_KEY not configured");
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-02-25.clover" });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -55,18 +58,20 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Verify with Stripe ──────────────────────────────────────────────────
+    let stripe: Stripe;
+    try {
+      stripe = initStripe();
+    } catch (err: any) {
+      console.error("[STRIPE_INIT]", err?.message || err);
+      return NextResponse.json({ success: false, error: "STRIPE_SECRET_KEY not configured" }, { status: 500 });
+    }
+
     let stripeSession: Stripe.Checkout.Session;
     try {
       stripeSession = await stripe.checkout.sessions.retrieve(sessionId);
-    } catch {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Could not retrieve session from Stripe. Please check your bookings.",
-        },
-        { status: 502 },
-      );
+    } catch (e) {
+      console.error("[STRIPE_RETRIEVE]", e);
+      return NextResponse.json({ success: false, error: "Could not retrieve session from Stripe. Please check your bookings." }, { status: 502 });
     }
 
     // Payment must be completed on Stripe side
