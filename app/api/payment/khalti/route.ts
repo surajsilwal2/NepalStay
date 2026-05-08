@@ -76,11 +76,12 @@ export async function POST(req: NextRequest) {
     // Use KHALTI_BASE_URL env var to control sandbox vs live independently of NODE_ENV.
     // Set KHALTI_BASE_URL=https://a.khalti.com on Vercel while using a test key,
     // or KHALTI_BASE_URL=https://khalti.com when you have a live key.
-    const khaltiBase =
+    const khaltiBase = (
       process.env.KHALTI_BASE_URL ||
       (process.env.NODE_ENV === "production"
         ? "https://khalti.com"
-        : "https://a.khalti.com");
+        : "https://a.khalti.com")
+    ).replace(/\/+$/, "");
 
     const payload = {
       return_url: `${appUrl}/payment/success?bookingId=${booking.id}`,
