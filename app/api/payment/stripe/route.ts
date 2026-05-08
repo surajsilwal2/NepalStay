@@ -10,7 +10,7 @@ function initStripe() {
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error("STRIPE_SECRET_KEY not configured");
   }
-  return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2025-07-30.basil" });
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-02-25.clover" });
 }
 
 export async function POST(req: NextRequest) {
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
 
     if (booking.paidAt) return NextResponse.json({ success: false, error: `This booking is already paid via ${booking.paymentMethod ?? "Khalti"}. Invoice: ${booking.invoiceNumber}` }, { status: 409 });
 
-    const appUrl = process.env.NEXTAUTH_URL || "https://nepal-stay.vercel.app";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "https://nepal-stay.vercel.app";
     const amountInCents = Math.max(50, Math.round((booking.totalPrice / 133) * 100));
 
     let stripe: Stripe;
@@ -73,8 +73,12 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true, data: { url: stripeSession.url, sessionId: stripeSession.id } });
-  } catch (error) {
-    console.error("[STRIPE_POST]", error);
-    return NextResponse.json({ success: false, error: "Payment initiation failed" }, { status: 500 });
+  } catch (error: any) {
+    console.error("[STRIPE_POST] type:", error?.type);
+    console.error("[STRIPE_POST] message:", error?.message);
+    console.error("[STRIPE_POST] code:", error?.code);
+    console.error("[STRIPE_POST] statusCode:", error?.statusCode);
+    const msg = error?.message || "Payment initiation failed";
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }
