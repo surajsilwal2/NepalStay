@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   BedDouble, RefreshCw, Users, CheckCircle, Sparkles, Wrench,
   X, Calendar, Phone, ChevronRight,
@@ -93,9 +93,9 @@ function RoomTile({
 // ─── Room Detail Panel ────────────────────────────────────────────────────────
 
 function RoomDetailPanel({
-  room, onClose,
+  room, onClose, onLocalStatusChange,
 }: {
-  room: PmsRoom; onClose: () => void;
+  room: PmsRoom; onClose: () => void; onLocalStatusChange?: (roomId: string, newStatus: RoomStatus) => void;
 }) {
   const cfg = STATUS_CFG[room.status];
   const Icon = cfg.icon;
@@ -157,6 +157,20 @@ function RoomDetailPanel({
               </span>
             </div>
           )}
+        </div>
+
+        {/* Local status change controls (client-only) */}
+        <div className="mt-4">
+          <div className="text-xs text-slate-500 mb-2">Change status (local preview)</div>
+          <div className="flex gap-2 flex-wrap">
+            {(Object.keys(STATUS_CFG) as RoomStatus[]).map(s => (
+              <button
+                key={s}
+                onClick={() => onLocalStatusChange?.(room.id, s)}
+                className={`px-3 py-1 rounded-full text-xs font-medium ${room.status === s ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700'}`}
+              >{STATUS_CFG[s].label}</button>
+            ))}
+          </div>
         </div>
 
         <button
@@ -300,8 +314,12 @@ export default function PMSBoard() {
   const [data, setData]             = useState<PmsData | null>(null);
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const [activeTab, setActiveTab]   = useState<"arrivals" | "departures">("arrivals");
   const [selectedRoom, setSelectedRoom] = useState<PmsRoom | null>(null);
+  const pollRef = useRef<number | null>(null);
 
   const fetchData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -323,6 +341,20 @@ export default function PMSBoard() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Auto-refresh polling
+  useEffect(() => {
+    if (autoRefresh) {
+      // start polling every 30s
+      pollRef.current = window.setInterval(() => fetchData(false), 30000);
+    }
+    return () => {
+      if (pollRef.current) {
+        window.clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [autoRefresh, fetchData]);
+
   if (loading) return <Skeleton />;
 
   if (!data) {
@@ -339,6 +371,30 @@ export default function PMSBoard() {
   }
 
   const { floorMap, rooms, timeline, todayArrivals, todayDepartures, currentOccupancy, statusCounts, totalRooms } = data;
+
+  // Apply search & status filter (client-side only) to rooms/floormap/timeline
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const roomMatches = (r: { id: string; name: string; type: string; status: RoomStatus }) => {
+    if (statusFilter && r.status !== statusFilter) return false;
+    if (!normalizedQuery) return true;
+    return r.name.toLowerCase().includes(normalizedQuery) || r.type.toLowerCase().includes(normalizedQuery);
+  };
+
+  const filteredFloorMap = floorMap.map(f => ({
+    ...f,
+    rooms: f.rooms.filter(roomMatches),
+  })).filter(f => f.rooms.length > 0);
+
+  const filteredTimeline = timeline.filter(t => {
+    // keep timeline rows that match filters
+    if (statusFilter) {
+      // try to find room in rooms list
+      const room = rooms.find(r => r.id === t.roomId);
+      if (room && room.status !== statusFilter) return false;
+    }
+    if (normalizedQuery) return t.roomName.toLowerCase().includes(normalizedQuery) || t.roomType.toLowerCase().includes(normalizedQuery);
+    return true;
+  });
 
   // Build quick lookup for full room data by id
   const roomById: Record<string, PmsRoom> = {};
@@ -357,14 +413,46 @@ export default function PMSBoard() {
               {totalRooms} rooms · {currentOccupancy}% occupied
             </p>
           </div>
-          <button
-            onClick={() => fetchData(true)}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Search */}
+            <div className="relative">
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search room or type..."
+                className="px-3 py-2 w-56 rounded-xl border border-slate-200 bg-white text-sm placeholder:text-slate-400"
+              />
+            </div>
+
+            {/* Status filters */}
+            <div className="hidden sm:flex items-center gap-2">
+              {(["AVAILABLE","OCCUPIED","CLEANING","MAINTENANCE"] as const).map(s => (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(prev => prev === s ? null : s)}
+                  className={`text-xs px-2 py-1 rounded-full border ${statusFilter === s ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-slate-600 border-slate-100'}`}
+                >{s.toLowerCase()}</button>
+              ))}
+            </div>
+
+            {/* Auto refresh + manual refresh */}
+            <button
+              onClick={() => setAutoRefresh(v => !v)}
+              className={`px-3 py-2 rounded-xl border text-sm ${autoRefresh ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-white text-slate-600 border-slate-200'}`}
+              title="Toggle auto-refresh (30s)"
+            >
+              {autoRefresh ? 'Auto-refresh: On' : 'Auto-refresh: Off'}
+            </button>
+
+            <button
+              onClick={() => fetchData(true)}
+              disabled={refreshing}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+          </div>
         </div>
 
         {/* ── Status summary ── */}
@@ -400,14 +488,14 @@ export default function PMSBoard() {
             </div>
           </div>
 
-          {floorMap.length === 0 ? (
+          {filteredFloorMap.length === 0 ? (
             <div className="text-center py-12 text-slate-400">
               <BedDouble className="w-10 h-10 mx-auto mb-2 opacity-40" />
               <p>No rooms found</p>
             </div>
           ) : (
             <div className="space-y-6">
-              {floorMap.map(floorEntry => (
+              {filteredFloorMap.map(floorEntry => (
                 <div key={floorEntry.floor}>
                   <div className="flex items-center gap-3 mb-3">
                     <div className="text-xs font-bold text-slate-500 uppercase tracking-widest bg-slate-100 px-2.5 py-1 rounded-lg">
@@ -436,8 +524,8 @@ export default function PMSBoard() {
             <Calendar className="w-4 h-4 text-amber-500" />
             <h2 className="font-bold text-slate-800">7-Day Booking Timeline</h2>
           </div>
-          {timeline.length > 0
-            ? <GanttChart timeline={timeline} />
+          {filteredTimeline.length > 0
+            ? <GanttChart timeline={filteredTimeline} />
             : <p className="text-slate-400 text-sm text-center py-8">No bookings in the next 7 days</p>
           }
         </div>
@@ -473,37 +561,48 @@ export default function PMSBoard() {
 
           {/* Content */}
           {activeTab === "arrivals" ? (
-            todayArrivals.length > 0 ? (
-              todayArrivals.map(a => (
-                <GuestRow key={a.bookingId} arrival={a} type="arrival" />
-              ))
+              todayArrivals.length > 0 ? (
+                todayArrivals.map(a => (
+                  <GuestRow key={a.bookingId} arrival={a} type="arrival" />
+                ))
+              ) : (
+                <div className="py-14 text-center text-slate-400">
+                  <CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">No arrivals today</p>
+                </div>
+              )
             ) : (
-              <div className="py-14 text-center text-slate-400">
-                <CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">No arrivals today</p>
-              </div>
-            )
-          ) : (
-            todayDepartures.length > 0 ? (
-              todayDepartures.map(d => (
-                <GuestRow key={d.bookingId} arrival={d} type="departure" />
-              ))
-            ) : (
-              <div className="py-14 text-center text-slate-400">
-                <ChevronRight className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">No departures today</p>
-              </div>
-            )
-          )}
+              todayDepartures.length > 0 ? (
+                todayDepartures.map(d => (
+                  <GuestRow key={d.bookingId} arrival={d} type="departure" />
+                ))
+              ) : (
+                <div className="py-14 text-center text-slate-400">
+                  <ChevronRight className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">No departures today</p>
+                </div>
+              )
+            )}
         </div>
       </main>
 
       {/* ── Room detail modal ── */}
       {selectedRoom && (
-        <RoomDetailPanel
-          room={selectedRoom}
-          onClose={() => setSelectedRoom(null)}
-        />
+            <RoomDetailPanel
+              room={selectedRoom}
+              onClose={() => setSelectedRoom(null)}
+              // local-only status change handler
+              onLocalStatusChange={(roomId, newStatus) => {
+                // update state locally, immutable
+                setData(prev => {
+                  if (!prev) return prev;
+                  const rooms = prev.rooms.map(r => r.id === roomId ? { ...r, status: newStatus as RoomStatus } : r);
+                  const floorMap = prev.floorMap.map(f => ({ ...f, rooms: f.rooms.map(rr => rr.id === roomId ? { ...rr, status: newStatus as RoomStatus } : rr) }));
+                  const timeline = prev.timeline; // keep same timeline for now
+                  return { ...prev, rooms, floorMap, timeline };
+                });
+              }}
+            />
       )}
     </div>
   );
