@@ -74,20 +74,23 @@ export async function POST(req: NextRequest) {
     }
 
     const vData = await vRes.json();
+    console.log("[KHALTI_VERIFY] lookup response:", JSON.stringify(vData));
+
     if (vData.status !== "Completed") {
       return NextResponse.json(
         {
           success: false,
-          error: `Payment not completed. Status: ${vData.status}`,
+          error: `Payment not completed. Khalti status: "${vData.status}". Please complete payment in the Khalti tab first.`,
         },
         { status: 400 },
       );
     }
 
     const paidNPR = vData.total_amount / 100;
+    console.log("[KHALTI_VERIFY] paidNPR:", paidNPR, "booking.totalPrice:", booking.totalPrice);
     if (Math.abs(paidNPR - booking.totalPrice) > 1) {
       return NextResponse.json(
-        { success: false, error: "Amount mismatch — payment not applied" },
+        { success: false, error: `Amount mismatch — paid NPR ${paidNPR} vs expected NPR ${booking.totalPrice}` },
         { status: 400 },
       );
     }
