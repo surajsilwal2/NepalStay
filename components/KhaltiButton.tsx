@@ -35,6 +35,10 @@ export default function KhaltiButton({ bookingId, amount, onSuccess }: Props) {
   }, [bookingId]);
 
   const handleInitiate = async () => {
+    // Open blank window IMMEDIATELY on user click (synchronous = never blocked by popup blocker)
+    // Then redirect it to Khalti URL after fetch — this is the standard pattern
+    const khaltiWin = window.open("", "_blank");
+
     setStep("verifying");
     setErrMsg("");
     try {
@@ -45,12 +49,18 @@ export default function KhaltiButton({ bookingId, amount, onSuccess }: Props) {
       });
       const data = await res.json();
       if (!data.success) {
+        khaltiWin?.close();
         setErrMsg(data.error || "Payment initiation failed");
         setStep("error");
         return;
       }
       const url = data.data.payment_url;
       const pid = data.data.pidx;
+
+      // Redirect the already-opened blank window to Khalti
+      if (khaltiWin) {
+        khaltiWin.location.href = url;
+      }
 
       // Persist so re-open works after accidental page refresh
       sessionStorage.setItem(SK_PIDX, pid);
@@ -59,9 +69,9 @@ export default function KhaltiButton({ bookingId, amount, onSuccess }: Props) {
 
       setPidx(pid);
       setPaymentUrl(url);
-      window.open(url, "_blank", "noopener,noreferrer");
       setStep("initiated");
     } catch {
+      khaltiWin?.close();
       setErrMsg("Network error. Please check your connection.");
       setStep("error");
     }
@@ -120,7 +130,7 @@ export default function KhaltiButton({ bookingId, amount, onSuccess }: Props) {
           className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-green-600 hover:bg-green-700 active:scale-95 text-white font-semibold rounded-xl transition-all text-sm">
           <CheckCircle className="w-4 h-4" />I&apos;ve Completed Payment
         </button>
-        {/* Use <a> tag — direct link, never blocked by popup blocker */}
+        {/* <a> tag — direct link, never blocked by popup blocker */}
         {paymentUrl && (
           <a href={paymentUrl} target="_blank" rel="noopener noreferrer"
             className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs hover:bg-slate-50">
