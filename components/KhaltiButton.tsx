@@ -13,9 +13,10 @@ interface Props {
 
 export default function KhaltiButton({ bookingId, amount, onSuccess }: Props) {
   const { success: toastSuccess, error: toastError } = useToast();
-  const [step, setStep]   = useState<Step>("idle");
-  const [pidx, setPidx]   = useState("");
-  const [errMsg, setErrMsg] = useState("");
+  const [step, setStep]           = useState<Step>("idle");
+  const [pidx, setPidx]           = useState("");
+  const [paymentUrl, setPaymentUrl] = useState("");
+  const [errMsg, setErrMsg]       = useState("");
 
   const handleInitiate = async () => {
     setStep("verifying");
@@ -27,13 +28,25 @@ export default function KhaltiButton({ bookingId, amount, onSuccess }: Props) {
         body: JSON.stringify({ bookingId }),
       });
       const data = await res.json();
-      if (!data.success) { setErrMsg(data.error || "Payment initiation failed"); setStep("error"); return; }
+      if (!data.success) {
+        setErrMsg(data.error || "Payment initiation failed");
+        setStep("error");
+        return;
+      }
       setPidx(data.data.pidx);
+      setPaymentUrl(data.data.payment_url);
       window.open(data.data.payment_url, "_blank", "noopener,noreferrer");
       setStep("initiated");
     } catch {
       setErrMsg("Network error. Please check your connection.");
       setStep("error");
+    }
+  };
+
+  // Opens the already-fetched payment_url directly — avoids popup blocker
+  const handleReopen = () => {
+    if (paymentUrl) {
+      window.open(paymentUrl, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -85,9 +98,9 @@ export default function KhaltiButton({ bookingId, amount, onSuccess }: Props) {
         </div>
         <button onClick={handleVerify}
           className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-green-600 hover:bg-green-700 active:scale-95 text-white font-semibold rounded-xl transition-all text-sm">
-          <CheckCircle className="w-4 h-4" />I've Completed Payment
+          <CheckCircle className="w-4 h-4" />I&apos;ve Completed Payment
         </button>
-        <button onClick={handleInitiate}
+        <button onClick={handleReopen}
           className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs hover:bg-slate-50">
           <ExternalLink className="w-3 h-3" />Re-open Khalti tab
         </button>
