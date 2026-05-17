@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, CreditCard, CheckCircle, ExternalLink, RefreshCw } from "lucide-react";
 import { useToast } from "@/components/providers/ToastContext";
 
@@ -11,12 +11,28 @@ interface Props {
   onSuccess?: () => void;
 }
 
+const SK_PIDX = "khalti_pidx";
+const SK_URL  = "khalti_payment_url";
+const SK_BID  = "khalti_bookingId";
+
 export default function KhaltiButton({ bookingId, amount, onSuccess }: Props) {
   const { success: toastSuccess, error: toastError } = useToast();
-  const [step, setStep]           = useState<Step>("idle");
-  const [pidx, setPidx]           = useState("");
+  const [step, setStep]             = useState<Step>("idle");
+  const [pidx, setPidx]             = useState("");
   const [paymentUrl, setPaymentUrl] = useState("");
-  const [errMsg, setErrMsg]       = useState("");
+  const [errMsg, setErrMsg]         = useState("");
+
+  // Restore in-progress session after page refresh
+  useEffect(() => {
+    const savedPidx = sessionStorage.getItem(SK_PIDX);
+    const savedUrl  = sessionStorage.getItem(SK_URL);
+    const savedBid  = sessionStorage.getItem(SK_BID);
+    if (savedPidx && savedUrl && savedBid === bookingId) {
+      setPidx(savedPidx);
+      setPaymentUrl(savedUrl);
+      setStep("initiated");
+    }
+  }, [bookingId]);
 
   const handleInitiate = async () => {
     setStep("verifying");
@@ -33,20 +49,21 @@ export default function KhaltiButton({ bookingId, amount, onSuccess }: Props) {
         setStep("error");
         return;
       }
-      setPidx(data.data.pidx);
-      setPaymentUrl(data.data.payment_url);
-      window.open(data.data.payment_url, "_blank", "noopener,noreferrer");
+      const url = data.data.payment_url;
+      const pid = data.data.pidx;
+
+      // Persist so re-open works after accidental page refresh
+      sessionStorage.setItem(SK_PIDX, pid);
+      sessionStorage.setItem(SK_URL, url);
+      sessionStorage.setItem(SK_BID, bookingId);
+
+      setPidx(pid);
+      setPaymentUrl(url);
+      window.open(url, "_blank", "noopener,noreferrer");
       setStep("initiated");
     } catch {
       setErrMsg("Network error. Please check your connection.");
       setStep("error");
-    }
-  };
-
-  // Opens the already-fetched payment_url directly — avoids popup blocker
-  const handleReopen = () => {
-    if (paymentUrl) {
-      window.open(paymentUrl, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -61,6 +78,9 @@ export default function KhaltiButton({ bookingId, amount, onSuccess }: Props) {
       });
       const data = await res.json();
       if (data.success) {
+        sessionStorage.removeItem(SK_PIDX);
+        sessionStorage.removeItem(SK_URL);
+        sessionStorage.removeItem(SK_BID);
         setStep("done");
         toastSuccess(`Payment confirmed! Invoice ${data.data.invoiceNumber}`);
         onSuccess?.();
@@ -100,10 +120,13 @@ export default function KhaltiButton({ bookingId, amount, onSuccess }: Props) {
           className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-green-600 hover:bg-green-700 active:scale-95 text-white font-semibold rounded-xl transition-all text-sm">
           <CheckCircle className="w-4 h-4" />I&apos;ve Completed Payment
         </button>
-        <button onClick={handleReopen}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs hover:bg-slate-50">
-          <ExternalLink className="w-3 h-3" />Re-open Khalti tab
-        </button>
+        {/* Use <a> tag — direct link, never blocked by popup blocker */}
+        {paymentUrl && (
+          <a href={paymentUrl} target="_blank" rel="noopener noreferrer"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs hover:bg-slate-50">
+            <ExternalLink className="w-3 h-3" />Re-open Khalti tab
+          </a>
+        )}
         {errMsg && <p className="text-xs text-red-600 text-center">{errMsg}</p>}
       </div>
     );
