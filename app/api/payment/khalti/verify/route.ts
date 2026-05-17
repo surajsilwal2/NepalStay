@@ -45,11 +45,12 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // NEW
-    const khaltiBase =
-      process.env.NODE_ENV === "production"
+    const khaltiBase = (
+      process.env.KHALTI_BASE_URL ||
+      (process.env.NODE_ENV === "production"
         ? "https://khalti.com"
-        : "https://a.khalti.com";
+        : "https://a.khalti.com")
+    ).replace(/\/+$/, "");
 
     const vRes = await fetch(`${khaltiBase}/api/v2/epayment/lookup/`, {
       method: "POST",
