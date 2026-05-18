@@ -86,8 +86,14 @@ model User {
   avatar    String?
   address   String?
   isActive  Boolean  @default(true)
+  
+  // User Profile
+  nationality       String   @default("NEPALI")  // NEPALI | FOREIGN
+  passportNumber    String?  // Only for foreign nationals
+  purposeOfVisit    String?  // For foreign tourists (LEISURE, BUSINESS, etc)
+  
   loyaltyPoints    Int      @default(0)
-loyaltyTier      String   @default("BRONZE")
+  loyaltyTier      String   @default("BRONZE")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -102,6 +108,7 @@ loyaltyTier      String   @default("BRONZE")
 
   @@index([email])
   @@index([role])
+  @@index([nationality])
 }
 
 // ─── Hotel ───────────────────────────────────────────────────────────────────
@@ -111,7 +118,7 @@ model Hotel {
   vendorId    String      @unique
   vendor      User        @relation(fields: [vendorId], references: [id])
 
-  name        String
+  name        String      @unique  // Hotel names must be unique
   slug        String      @unique  // URL-friendly: "hotel-himalaya-pokhara"
   description String
   status      HotelStatus @default(PENDING)
@@ -134,6 +141,10 @@ model Hotel {
   contactEmail String?
   website      String?
 
+  // Hotel Size Management
+  hotelSize    String      @default("SMALL")  // SMALL | MEDIUM | LARGE
+  staffEnabled Boolean     @default(false)    // Auto-enabled at 12+ rooms
+
   // Admin
   approvedAt  DateTime?
   approvedBy  String?    // Admin userId
@@ -153,6 +164,7 @@ model Hotel {
   @@index([status])
   @@index([starRating])
   @@index([slug])
+  @@index([hotelSize])
 }
 
 // ─── Room ────────────────────────────────────────────────────────────────────
@@ -162,7 +174,8 @@ model Room {
   hotelId       String
   hotel         Hotel      @relation(fields: [hotelId], references: [id], onDelete: Cascade)
 
-  name          String     // "Deluxe Mountain View", "Standard Twin"
+  roomNumber    String     // "101", "G05", "301" - UNIQUE per hotel
+  name          String     // "Deluxe Mountain View", "Standard Twin" - UNIQUE per hotel
   type          RoomType
   status        RoomStatus @default(AVAILABLE)
   pricePerNight Float
@@ -182,6 +195,8 @@ model Room {
   bookings      Booking[]
   roomStatusLogs RoomStatusLog[]
 
+  @@unique([hotelId, roomNumber])  // Room numbers must be unique per hotel
+  @@unique([hotelId, name])        // Room names must be unique per hotel
   @@index([hotelId])
   @@index([status])
   @@index([type])
@@ -199,9 +214,9 @@ model Booking {
   room      Room          @relation(fields: [roomId], references: [id])
 
   pointsEarned     Int?
-pointsRedeemed   Int?
-discountAmount   Float?   @default(0)
-carbonKg         Float?
+  pointsRedeemed   Int?
+  discountAmount   Float?   @default(0)
+  carbonKg         Float?
 
   checkIn   DateTime
   stripeSessionId String?
@@ -229,10 +244,7 @@ carbonKg         Float?
   refundedAt     DateTime?
   creditNoteRef  String?
 
-  // FNMIS — foreign guest compliance
-  guestNationality  String?
-  passportNumber    String?
-  purposeOfVisit    String?
+  // FNMIS — foreign guest compliance (read from User.nationality)
   fnmisDeadline     DateTime?
   fnmisReported     Boolean  @default(false)
   fnmisReportedAt   DateTime?

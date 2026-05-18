@@ -6,11 +6,14 @@ import { z } from "zod";
 export const dynamic = "force-dynamic";
 
 const schema = z.object({
-  name:     z.string().min(2),
-  email:    z.string().email(),
-  password: z.string().min(8),
-  phone:    z.string().optional(),
-  role:     z.enum(["CUSTOMER", "VENDOR"]).default("CUSTOMER"),
+  name:            z.string().min(2),
+  email:           z.string().email(),
+  password:        z.string().min(8),
+  phone:           z.string().optional(),
+  role:            z.enum(["CUSTOMER", "VENDOR"]).default("CUSTOMER"),
+  nationality:     z.enum(["NEPALI", "FOREIGN"]).default("NEPALI"),
+  passportNumber:  z.string().optional(),
+  purposeOfVisit:  z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -24,7 +27,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { name, email, password, phone, role } = parsed.data;
+    const { name, email, password, phone, role, nationality, passportNumber, purposeOfVisit } = parsed.data;
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -36,8 +39,17 @@ export async function POST(req: NextRequest) {
 
     const hashed = await bcrypt.hash(password, 12);
     const user   = await prisma.user.create({
-      data: { name, email, password: hashed, phone, role },
-      select: { id: true, name: true, email: true, role: true },
+      data: {
+        name,
+        email,
+        password: hashed,
+        phone,
+        role,
+        nationality,
+        passportNumber: nationality === "FOREIGN" ? passportNumber : null,
+        purposeOfVisit: nationality === "FOREIGN" ? purposeOfVisit : null,
+      },
+      select: { id: true, name: true, email: true, role: true, nationality: true },
     });
 
     return NextResponse.json(
