@@ -19,6 +19,18 @@ export const authOptions: NextAuthOptions = {
         }
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
+          select: {
+            id: true,
+            email: true,
+            password: true,
+            name: true,
+            role: true,
+            avatar: true,
+            isActive: true,
+            nationality: true,
+            passportNumber: true,
+            purposeOfVisit: true,
+          },
         });
         if (!user || !user.isActive) {
           throw new Error("No account found with this email");
@@ -27,11 +39,14 @@ export const authOptions: NextAuthOptions = {
         if (!valid) throw new Error("Incorrect password");
 
         return {
-          id:    user.id,
-          email: user.email,
-          name:  user.name,
-          role:  user.role,
-          avatar: user.avatar,
+          id:              user.id,
+          email:           user.email,
+          name:            user.name,
+          role:            user.role,
+          avatar:          user.avatar,
+          nationality:     user.nationality,
+          passportNumber:  user.passportNumber,
+          purposeOfVisit:  user.purposeOfVisit,
         };
       },
     }),
@@ -39,12 +54,15 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user, trigger, session }) {
       if (user) {
-        token.id     = user.id;
-        token.role   = (user as any).role;
-        token.avatar = (user as any).avatar;
-        token.name   = user.name;
+        token.id              = user.id;
+        token.role            = (user as any).role;
+        token.avatar          = (user as any).avatar;
+        token.name            = user.name;
+        token.nationality     = (user as any).nationality;
+        token.passportNumber  = (user as any).passportNumber;
+        token.purposeOfVisit  = (user as any).purposeOfVisit;
       }
-      // Handle update() calls from the client (e.g. profile save)
+      // Handle update() calls from the client (e.g profile save)
       if (trigger === "update" && session) {
         if (session.name  !== undefined) token.name   = session.name;
         if (session.avatar !== undefined) token.avatar = session.avatar;
@@ -53,9 +71,12 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (token && session.user) {
-        (session.user as any).id     = token.id;
-        (session.user as any).role   = token.role;
-        (session.user as any).avatar = token.avatar;
+        (session.user as any).id              = token.id;
+        (session.user as any).role            = token.role;
+        (session.user as any).avatar          = token.avatar;
+        (session.user as any).nationality     = token.nationality;
+        (session.user as any).passportNumber  = token.passportNumber;
+        (session.user as any).purposeOfVisit  = token.purposeOfVisit;
         if (token.name) session.user.name = token.name as string;
       }
       return session;

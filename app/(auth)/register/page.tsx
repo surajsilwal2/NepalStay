@@ -14,9 +14,20 @@ const schema = z.object({
   password:        z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string(),
   role:            z.enum(["CUSTOMER", "VENDOR"]),
+  nationality:     z.enum(["NEPALI", "FOREIGN"]),
+  passportNumber:  z.string().optional(),
+  purposeOfVisit:  z.string().optional(),
 }).refine((d) => d.password === d.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
+}).refine((d) => {
+  if (d.nationality === "FOREIGN") {
+    return d.passportNumber && d.passportNumber.length >= 6;
+  }
+  return true;
+}, {
+  message: "Passport number required for foreign nationals",
+  path: ["passportNumber"],
 });
 type Form = z.infer<typeof schema>;
 
@@ -30,13 +41,23 @@ export default function RegisterPage() {
     useForm<Form>({ resolver: zodResolver(schema), defaultValues: { role: "CUSTOMER" } });
 
   const selectedRole = watch("role");
+  const selectedNationality = watch("nationality");
 
   const onSubmit = async (data: Form) => {
     setError("");
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: data.name, email: data.email, password: data.password, phone: data.phone, role: data.role }),
+      body: JSON.stringify({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        phone: data.phone,
+        role: data.role,
+        nationality: data.nationality,
+        passportNumber: data.passportNumber,
+        purposeOfVisit: data.purposeOfVisit,
+      }),
     });
     const json = await res.json();
     if (!json.success) { setError(json.error); return; }
@@ -108,6 +129,51 @@ export default function RegisterPage() {
                     )}
                   </div>
                 ))}
+
+                {/* Nationality Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-3">Your Nationality</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {(["NEPALI", "FOREIGN"] as const).map((nat) => (
+                      <label key={nat}
+                        className={`relative flex flex-col items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                          selectedNationality === nat
+                            ? "border-amber-500 bg-amber-50"
+                            : "border-slate-200 hover:border-amber-300"
+                        }`}>
+                        <input {...register("nationality")} type="radio" value={nat} className="sr-only" />
+                        <span className="text-lg mb-1">{nat === "NEPALI" ? "🇳🇵" : "🌍"}</span>
+                        <span className="text-xs font-semibold text-slate-700">{nat === "NEPALI" ? "Nepali Citizen" : "Foreign Tourist"}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {errors.nationality && <p className="mt-2 text-xs text-red-600">{errors.nationality.message}</p>}
+                </div>
+
+                {/* Passport Number for Foreign */}
+                {selectedNationality === "FOREIGN" && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Passport Number *</label>
+                    <input {...register("passportNumber")} type="text" placeholder="e.g., AB123456" className={inputCls} />
+                    {errors.passportNumber && <p className="mt-1 text-xs text-red-600">{errors.passportNumber.message}</p>}
+                  </div>
+                )}
+
+                {/* Purpose of Visit for Foreign */}
+                {selectedNationality === "FOREIGN" && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Purpose of Visit</label>
+                    <select {...register("purposeOfVisit")} className={inputCls}>
+                      <option value="">Select purpose...</option>
+                      <option value="LEISURE">Leisure/Tourism</option>
+                      <option value="BUSINESS">Business</option>
+                      <option value="EDUCATION">Education</option>
+                      <option value="MEDICAL">Medical Treatment</option>
+                      <option value="TRANSIT">Transit</option>
+                      <option value="OTHER">Other</option>
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
