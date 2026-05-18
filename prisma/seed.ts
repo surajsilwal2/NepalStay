@@ -6,8 +6,25 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Seeding NepalStay database with optimized data...\n");
 
+  // ✅ SAFETY: Require explicit opt-in for destructive cleanup
+  if (process.env.SEED_MODE !== "demo") {
+    console.error(
+      "❌ Destructive seed cleanup is disabled. " +
+      "Run with SEED_MODE=demo to allow cleanup and demo reseeding."
+    );
+
+    process.exit(1);
+  }
+
+  // ✅ Clear existing demo data to avoid unique constraint violations
+  console.log("🧹 Cleaning up existing demo data...");
+  await prisma.roomStatusLog.deleteMany({});
+  await prisma.room.deleteMany({});
+  console.log("✅ Cleaned up\n");
+
   const hashedPassword = await bcrypt.hash("password123", 12);
   const adminPassword = await bcrypt.hash("admin123", 12);
+  
 
   // ────────────────────────────────────────────────────────────────────────
   // USERS
@@ -354,14 +371,14 @@ async function main() {
   console.log("🛏️  Creating rooms for Hotel 2 (Large - 32 rooms)...");
 
   const hotel2Rooms = [
-    // BASEMENT - Budget & Dorm (8 rooms)
+    // FLOOR 1 - Ground Floor - Budget & Dorm (8 rooms)
     {
       roomNumber: "B01",
       name: "Budget Dormitory A",
       type: "DORMITORY",
       pricePerNight: 1200,
       capacity: 1,
-      floor: -1,
+      floor: 1,
       totalRooms: 6,
       description: "6-bed dormitory for budget-conscious backpackers.",
       amenities: ["WiFi", "Shared Kitchen", "Locker", "Fan", "Common Area"],
@@ -373,7 +390,7 @@ async function main() {
       type: "DORMITORY",
       pricePerNight: 1200,
       capacity: 1,
-      floor: -1,
+      floor: 1,
       totalRooms: 6,
       description: "6-bed dormitory for budget-conscious backpackers.",
       amenities: ["WiFi", "Shared Kitchen", "Locker", "Fan", "Common Area"],
@@ -385,7 +402,7 @@ async function main() {
       type: "SINGLE",
       pricePerNight: 2200,
       capacity: 1,
-      floor: -1,
+      floor: 1,
       totalRooms: 1,
       description: "Affordable single room with basic amenities.",
       amenities: ["WiFi", "Hot Water", "Fan"],
@@ -397,7 +414,7 @@ async function main() {
       type: "SINGLE",
       pricePerNight: 2200,
       capacity: 1,
-      floor: -1,
+      floor: 1,
       totalRooms: 1,
       description: "Affordable single room with basic amenities.",
       amenities: ["WiFi", "Hot Water", "Fan"],
@@ -409,7 +426,7 @@ async function main() {
       type: "DOUBLE",
       pricePerNight: 3500,
       capacity: 2,
-      floor: -1,
+      floor: 1,
       totalRooms: 1,
       description: "Economy double room for budget travelers.",
       amenities: ["WiFi", "Hot Water", "Fan", "Shared Bathroom"],
@@ -421,7 +438,7 @@ async function main() {
       type: "DOUBLE",
       pricePerNight: 3500,
       capacity: 2,
-      floor: -1,
+      floor: 1,
       totalRooms: 1,
       description: "Economy double room for budget travelers.",
       amenities: ["WiFi", "Hot Water", "Fan", "Shared Bathroom"],
@@ -433,7 +450,7 @@ async function main() {
       type: "TWIN",
       pricePerNight: 4000,
       capacity: 2,
-      floor: -1,
+      floor: 1,
       totalRooms: 1,
       description: "Economy twin room with shared facilities.",
       amenities: ["WiFi", "Hot Water", "Fan"],
@@ -445,21 +462,21 @@ async function main() {
       type: "TWIN",
       pricePerNight: 4000,
       capacity: 2,
-      floor: -1,
+      floor: 1,
       totalRooms: 1,
       description: "Economy twin room with shared facilities.",
       amenities: ["WiFi", "Hot Water", "Fan"],
       images: ["https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&h=600&fit=crop&q=80"],
     },
 
-    // FLOOR 1 - Standard & Lake View (8 rooms)
+    // FLOOR 2 - Standard & Lake View (8 rooms)
     {
       roomNumber: "101",
       name: "Standard Single G1",
       type: "SINGLE",
       pricePerNight: 3200,
       capacity: 1,
-      floor: 1,
+      floor: 2,
       totalRooms: 1,
       description: "Comfortable standard single room.",
       amenities: ["WiFi", "AC", "Hot Water", "TV"],
@@ -471,7 +488,7 @@ async function main() {
       type: "SINGLE",
       pricePerNight: 3200,
       capacity: 1,
-      floor: 1,
+      floor: 2,
       totalRooms: 1,
       description: "Comfortable standard single room.",
       amenities: ["WiFi", "AC", "Hot Water", "TV"],
@@ -483,7 +500,7 @@ async function main() {
       type: "DOUBLE",
       pricePerNight: 6200,
       capacity: 2,
-      floor: 1,
+      floor: 2,
       totalRooms: 1,
       description: "Room with direct Phewa Lake views.",
       amenities: ["WiFi", "AC", "Hot Water", "Balcony", "Lake View"],
@@ -495,7 +512,7 @@ async function main() {
       type: "DOUBLE",
       pricePerNight: 6200,
       capacity: 2,
-      floor: 1,
+      floor: 2,
       totalRooms: 1,
       description: "Room with direct Phewa Lake views.",
       amenities: ["WiFi", "AC", "Hot Water", "Balcony", "Lake View"],
@@ -507,7 +524,7 @@ async function main() {
       type: "TWIN",
       pricePerNight: 5500,
       capacity: 2,
-      floor: 1,
+      floor: 2,
       totalRooms: 1,
       description: "Twin room with lake and mountain partial views.",
       amenities: ["WiFi", "AC", "Hot Water", "City View"],
@@ -519,7 +536,7 @@ async function main() {
       type: "TWIN",
       pricePerNight: 5500,
       capacity: 2,
-      floor: 1,
+      floor: 2,
       totalRooms: 1,
       description: "Twin room with lake and mountain partial views.",
       amenities: ["WiFi", "AC", "Hot Water", "City View"],
@@ -531,7 +548,7 @@ async function main() {
       type: "DELUXE",
       pricePerNight: 8500,
       capacity: 3,
-      floor: 1,
+      floor: 2,
       totalRooms: 1,
       description: "Spacious family room with separate living area and lake view.",
       amenities: ["WiFi", "AC", "Hot Water", "Living Area", "Lake View"],
@@ -543,21 +560,21 @@ async function main() {
       type: "DELUXE",
       pricePerNight: 8500,
       capacity: 3,
-      floor: 1,
+      floor: 2,
       totalRooms: 1,
       description: "Spacious family room with separate living area and lake view.",
       amenities: ["WiFi", "AC", "Hot Water", "Living Area", "Lake View"],
       images: ["https://images.unsplash.com/photo-1591088407891-249cb8f5e9d8?w=800&h=600&fit=crop&q=80"],
     },
 
-    // FLOOR 2 - Premium & Annapurna View (8 rooms)
+    // FLOOR 3 - Premium & Annapurna View (8 rooms)
     {
       roomNumber: "201",
       name: "Annapurna View Single",
       type: "SINGLE",
       pricePerNight: 4500,
       capacity: 1,
-      floor: 2,
+      floor: 3,
       totalRooms: 1,
       description: "Single room with direct Annapurna range views.",
       amenities: ["WiFi", "AC", "Hot Water", "Mountain View", "Balcony"],
@@ -569,7 +586,7 @@ async function main() {
       type: "DOUBLE",
       pricePerNight: 7800,
       capacity: 2,
-      floor: 2,
+      floor: 3,
       totalRooms: 1,
       description: "Premium double with Annapurna mountain views.",
       amenities: ["WiFi", "AC", "Hot Water", "Balcony", "Mountain View", "Spa Bath"],
@@ -581,7 +598,7 @@ async function main() {
       type: "DOUBLE",
       pricePerNight: 7800,
       capacity: 2,
-      floor: 2,
+      floor: 3,
       totalRooms: 1,
       description: "Premium double with Annapurna mountain views.",
       amenities: ["WiFi", "AC", "Hot Water", "Balcony", "Mountain View", "Spa Bath"],
@@ -593,7 +610,7 @@ async function main() {
       type: "DELUXE",
       pricePerNight: 10200,
       capacity: 2,
-      floor: 2,
+      floor: 3,
       totalRooms: 1,
       description: "Deluxe room with panoramic mountain and lake views.",
       amenities: ["WiFi", "AC", "Hot Water", "Terrace", "Mountain View", "Lake View", "Minibar"],
@@ -605,7 +622,7 @@ async function main() {
       type: "DELUXE",
       pricePerNight: 10200,
       capacity: 2,
-      floor: 2,
+      floor: 3,
       totalRooms: 1,
       description: "Deluxe room with panoramic mountain and lake views.",
       amenities: ["WiFi", "AC", "Hot Water", "Terrace", "Mountain View", "Lake View", "Minibar"],
@@ -617,7 +634,7 @@ async function main() {
       type: "SUITE",
       pricePerNight: 13500,
       capacity: 2,
-      floor: 2,
+      floor: 3,
       totalRooms: 1,
       description: "Romantic suite with private hot tub and premium bedding.",
       amenities: ["WiFi", "AC", "Hot Water", "Hot Tub", "Mountain View", "Lake View", "Romantic Setup"],
@@ -629,7 +646,7 @@ async function main() {
       type: "SUITE",
       pricePerNight: 13500,
       capacity: 2,
-      floor: 2,
+      floor: 3,
       totalRooms: 1,
       description: "Romantic suite with private hot tub and premium bedding.",
       amenities: ["WiFi", "AC", "Hot Water", "Hot Tub", "Mountain View", "Lake View", "Romantic Setup"],
@@ -641,7 +658,7 @@ async function main() {
       type: "SUITE",
       pricePerNight: 18000,
       capacity: 4,
-      floor: 2,
+      floor: 3,
       totalRooms: 1,
       description: "Luxurious presidential suite with multiple rooms and private terrace.",
       amenities: [
@@ -658,14 +675,14 @@ async function main() {
       images: ["https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800&h=600&fit=crop&q=80"],
     },
 
-    // FLOOR 3 - Penthouse & VIP Suites (8 rooms)
+    // FLOOR 4 - Penthouse & VIP Suites (8 rooms)
     {
       roomNumber: "301",
       name: "Penthouse East",
       type: "PENTHOUSE",
       pricePerNight: 20000,
       capacity: 4,
-      floor: 3,
+      floor: 4,
       totalRooms: 1,
       description: "Exclusive penthouse facing Annapurna range with terrace.",
       amenities: [
@@ -686,7 +703,7 @@ async function main() {
       type: "PENTHOUSE",
       pricePerNight: 20000,
       capacity: 4,
-      floor: 3,
+      floor: 4,
       totalRooms: 1,
       description: "Exclusive penthouse facing Phewa Lake with full views.",
       amenities: [
@@ -707,7 +724,7 @@ async function main() {
       type: "SUITE",
       pricePerNight: 15500,
       capacity: 3,
-      floor: 3,
+      floor: 4,
       totalRooms: 1,
       description: "Royal suite with living room and panoramic views.",
       amenities: ["WiFi", "AC", "Hot Water", "Living Area", "Mountain View", "Minibar"],
@@ -719,7 +736,7 @@ async function main() {
       type: "SUITE",
       pricePerNight: 15500,
       capacity: 3,
-      floor: 3,
+      floor: 4,
       totalRooms: 1,
       description: "Royal suite with living room and panoramic views.",
       amenities: ["WiFi", "AC", "Hot Water", "Living Area", "Mountain View", "Minibar"],
@@ -731,7 +748,7 @@ async function main() {
       type: "DELUXE",
       pricePerNight: 11800,
       capacity: 2,
-      floor: 3,
+      floor: 4,
       totalRooms: 1,
       description: "Deluxe corner room with wraparound views.",
       amenities: ["WiFi", "AC", "Hot Water", "Mountain View", "Lake View", "Terrace"],
@@ -743,7 +760,7 @@ async function main() {
       type: "DELUXE",
       pricePerNight: 11800,
       capacity: 2,
-      floor: 3,
+      floor: 4,
       totalRooms: 1,
       description: "Deluxe corner room with wraparound views.",
       amenities: ["WiFi", "AC", "Hot Water", "Mountain View", "Lake View", "Terrace"],
@@ -755,7 +772,7 @@ async function main() {
       type: "SINGLE",
       pricePerNight: 5800,
       capacity: 1,
-      floor: 3,
+      floor: 4,
       totalRooms: 1,
       description: "Executive single room with premium amenities.",
       amenities: ["WiFi", "AC", "Hot Water", "Mountain View", "Work Desk", "Premium Bedding"],
@@ -767,7 +784,7 @@ async function main() {
       type: "DOUBLE",
       pricePerNight: 9200,
       capacity: 2,
-      floor: 3,
+      floor: 4,
       totalRooms: 1,
       description: "Executive double room with conference setup.",
       amenities: ["WiFi", "AC", "Hot Water", "Mountain View", "Conference Table", "Premium Bedding"],
