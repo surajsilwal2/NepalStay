@@ -25,7 +25,7 @@ const HotelMap = dynamic(() => import("@/components/HotelMap"), { ssr: false,
 });
 
 type Room = {
-  id: string; name: string; type: string; status: string;
+  id: string; name: string; roomNumber: string; type: string; status: string;
   pricePerNight: number; capacity: number; floor: number;
   description: string | null; amenities: string[]; images: string[];
 };
@@ -325,6 +325,9 @@ export default function HotelDetailPage() {
                           <h3 className="font-bold text-slate-800">
                             {room.name}
                           </h3>
+                          <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">
+                            Room {room.roomNumber}
+                          </span>
                           <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
                             {room.type}
                           </span>

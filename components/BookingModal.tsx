@@ -22,7 +22,7 @@ type Room = {
 
 interface Props {
   room: Room;
-  hotel: { id: string; name: string; slug: string };
+  hotel: { id: string; name: string; slug: string; policies?: any };
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -39,14 +39,19 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
   const { isBS } = useCalendar();
   const { error: toastError } = useToast();
 
+  // ✅ Get user's nationality, passport, and purpose from session
+  const userNationality = (session?.user as any)?.nationality || "Nepali";
+  const userPassport = (session?.user as any)?.passportNumber || "";
+  const userPurpose = (session?.user as any)?.purposeOfVisit || "Tourism";
+
   const [checkInDate,  setCheckInDate]  = useState<Date | null>(null);
   const [checkOutDate, setCheckOutDate] = useState<Date | null>(null);
   const [adults, setAdults]     = useState(1);
   const [children, setChildren] = useState(0);
   const [notes, setNotes]       = useState("");
-  const [nationality, setNationality]       = useState("Nepali");
-  const [passportNumber, setPassportNumber] = useState("");
-  const [purposeOfVisit, setPurposeOfVisit] = useState("Tourism");
+  const [nationality, setNationality]       = useState(userNationality);
+  const [passportNumber, setPassportNumber] = useState(userPassport);
+  const [purposeOfVisit, setPurposeOfVisit] = useState(userPurpose);
 
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState("");
@@ -297,19 +302,12 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
                   <Globe className="w-3 h-3 inline mr-1" />
-                  Nationality
+                  Nationality (From your profile)
                 </label>
-                <select
-                  value={nationality}
-                  onChange={(e) => setNationality(e.target.value)}
-                  className={inputCls}
-                >
-                  {NATIONALITIES.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
+                <div className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 text-slate-700 font-medium flex items-center">
+                  {userNationality === "FOREIGN" ? "Foreign Tourist" : "Nepali"}
+                  <span className="text-xs text-slate-500 ml-auto">(Read-only)</span>
+                </div>
               </div>
 
               {/* FNMIS */}
