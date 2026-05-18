@@ -6,14 +6,25 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Seeding NepalStay database with optimized data...\n");
 
-  // ✅ Clear existing data to avoid unique constraint violations
-  console.log("🧹 Cleaning up existing data...");
+  // ✅ SAFETY: Require explicit opt-in for destructive cleanup
+  if (process.env.SEED_MODE !== "demo") {
+    console.error(
+      "❌ Destructive seed cleanup is disabled. " +
+      "Run with SEED_MODE=demo to allow cleanup and demo reseeding."
+    );
+
+    process.exit(1);
+  }
+
+  // ✅ Clear existing demo data to avoid unique constraint violations
+  console.log("🧹 Cleaning up existing demo data...");
   await prisma.roomStatusLog.deleteMany({});
   await prisma.room.deleteMany({});
   console.log("✅ Cleaned up\n");
 
   const hashedPassword = await bcrypt.hash("password123", 12);
   const adminPassword = await bcrypt.hash("admin123", 12);
+  
 
   // ────────────────────────────────────────────────────────────────────────
   // USERS

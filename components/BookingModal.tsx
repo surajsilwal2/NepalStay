@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
@@ -34,37 +34,94 @@ const NATIONALITIES = [
 const PURPOSE_OPTIONS = ["Tourism", "Business", "Trekking", "Medical", "Education", "Transit"];
 
 export default function BookingModal({ room, hotel, onClose, onSuccess }: Props) {
-  const { data: session } = useSession();
+   const { data: session } = useSession();
   const router = useRouter();
   const { isBS } = useCalendar();
   const { error: toastError } = useToast();
 
-  // ✅ Get user's nationality, passport, and purpose from session
-  const userNationality = (session?.user as any)?.nationality || "Nepali";
-  const userPassport = (session?.user as any)?.passportNumber || "";
-  const userPurpose = (session?.user as any)?.purposeOfVisit || "Tourism";
+  // Session-derived defaults
+  const userNationality =
+    (session?.user as any)?.nationality || "Nepali";
 
-  const [checkInDate,  setCheckInDate]  = useState<Date | null>(null);
+  const userPassport =
+    (session?.user as any)?.passportNumber || "";
+
+  const userPurpose =
+    (session?.user as any)?.purposeOfVisit || "Tourism";
+
+  const [checkInDate, setCheckInDate] = useState<Date | null>(null);
   const [checkOutDate, setCheckOutDate] = useState<Date | null>(null);
-  const [adults, setAdults]     = useState(1);
-  const [children, setChildren] = useState(0);
-  const [notes, setNotes]       = useState("");
-  const [nationality, setNationality]       = useState(userNationality);
-  const [passportNumber, setPassportNumber] = useState(userPassport);
-  const [purposeOfVisit, setPurposeOfVisit] = useState(userPurpose);
 
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState("");
-  const [success, setSuccess]     = useState(false);
+  const [adults, setAdults] = useState(1);
+  const [children, setChildren] = useState(0);
+
+  const [notes, setNotes] = useState("");
+
+  const [nationality, setNationality] =
+    useState(userNationality);
+
+  const [passportNumber, setPassportNumber] =
+    useState(userPassport);
+
+  const [purposeOfVisit, setPurposeOfVisit] =
+    useState(userPurpose);
+
+  // ✅ Sync state when session resolves later
+  // Avoid overwriting user edits
+  useEffect(() => {
+    if (!session?.user) return;
+
+    const sessionNationality =
+      (session.user as any)?.nationality || "Nepali";
+
+    const sessionPassport =
+      (session.user as any)?.passportNumber || "";
+
+    const sessionPurpose =
+      (session.user as any)?.purposeOfVisit || "Tourism";
+
+    setNationality((prev: string) => {
+      if (!prev || prev === "Nepali") {
+        return sessionNationality;
+      }
+      return prev;
+    });
+
+    setPassportNumber((prev: string) => {
+      if (!prev || prev === "") {
+        return sessionPassport;
+      }
+      return prev;
+    });
+
+    setPurposeOfVisit((prev: string) => {
+      if (!prev || prev === "Tourism") {
+        return sessionPurpose;
+      }
+      return prev;
+    });
+  }, [session]);
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
   const [bookingId, setBookingId] = useState("");
 
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const nights = checkInDate && checkOutDate
-    ? differenceInCalendarDays(checkOutDate, checkInDate) : 0;
-  const totalPrice  = nights > 0 ? nights * room.pricePerNight : 0;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const nights =
+    checkInDate && checkOutDate
+      ? differenceInCalendarDays(checkOutDate, checkInDate)
+      : 0;
+
+  const totalPrice =
+    nights > 0 ? nights * room.pricePerNight : 0;
+
   const isForeigner = nationality !== "Nepali";
 
-  const toInputVal = (d: Date | null) => d ? format(d, "yyyy-MM-dd") : "";
+  const toInputVal = (d: Date | null) =>
+    d ? format(d, "yyyy-MM-dd") : "";
 
   const handleSubmit = async () => {
     setError("");
