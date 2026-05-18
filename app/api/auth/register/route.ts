@@ -5,16 +5,29 @@ import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
-const schema = z.object({
-  name:            z.string().min(2),
-  email:           z.string().email(),
-  password:        z.string().min(8),
-  phone:           z.string().optional(),
-  role:            z.enum(["CUSTOMER", "VENDOR"]).default("CUSTOMER"),
-  nationality:     z.enum(["NEPALI", "FOREIGN"]).default("NEPALI"),
-  passportNumber:  z.string().optional(),
-  purposeOfVisit:  z.string().optional(),
-});
+const schema = z
+  .object({
+    name: z.string().min(2),
+    email: z.string().email(),
+    password: z.string().min(8),
+    phone: z.string().optional(),
+    role: z.enum(["CUSTOMER", "VENDOR"]).default("CUSTOMER"),
+    nationality: z.enum(["NEPALI", "FOREIGN"]).default("NEPALI"),
+    passportNumber: z.string().optional(),
+    purposeOfVisit: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (
+      data.nationality === "FOREIGN" &&
+      (!data.passportNumber || data.passportNumber.trim() === "")
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["passportNumber"],
+        message: "Passport number is required for foreign nationals",
+      });
+    }
+  });
 
 export async function POST(req: NextRequest) {
   try {

@@ -353,14 +353,21 @@ async function main() {
     },
   ];
 
-  for (const room of hotel1Rooms) {
-    await prisma.room.create({
-      data: {
-        hotelId: hotel1.id,
-        ...room,
-      },
-    });
-  }
+ for (const room of hotel1Rooms) {
+   await prisma.room.upsert({
+     where: {
+       hotelId_roomNumber: {
+         hotelId: hotel1.id,
+         roomNumber: room.roomNumber,
+       },
+     },
+     update: {},
+     create: {
+       hotelId: hotel1.id,
+       ...room,
+     },
+   });
+ }
 
   console.log("✅ 8 rooms created for Hotel 1\n");
 
@@ -792,14 +799,21 @@ async function main() {
     },
   ];
 
-  for (const room of hotel2Rooms) {
-    await prisma.room.create({
-      data: {
+for (const room of hotel2Rooms) {
+  await prisma.room.upsert({
+    where: {
+      hotelId_roomNumber: {
         hotelId: hotel2.id,
-        ...room,
+        roomNumber: room.roomNumber,
       },
-    });
-  }
+    },
+    update: {},
+    create: {
+      hotelId: hotel2.id,
+      ...room,
+    },
+  });
+}
 
   console.log("✅ 32 rooms created for Hotel 2\n");
 
