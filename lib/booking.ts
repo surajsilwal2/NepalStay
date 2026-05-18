@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma";
 import { BookingStatus } from "@prisma/client";
-import { differenceInCalendarDays } from "date-fns";
+import { differenceInCalendarDays, startOfDay } from "date-fns";
 
 /**
  * Booking Conflict Detection Algorithm
@@ -56,7 +56,8 @@ export function getCancellationPolicy(checkIn: Date): {
   description: string;
   daysToCheckIn: number;
 } {
-  const days = differenceInCalendarDays(checkIn, new Date());
+  const today = new Date(Date.now());
+  const days = differenceInCalendarDays(startOfDay(checkIn), startOfDay(today));
   if (days > 7)  return { percent: 100, daysToCheckIn: days, description: "Full refund — cancelled more than 7 days before check-in" };
   if (days >= 3) return { percent: 50,  daysToCheckIn: days, description: "50% refund — cancelled 3–7 days before check-in" };
   return           { percent: 0,   daysToCheckIn: days, description: "No refund — cancelled less than 3 days before check-in" };
