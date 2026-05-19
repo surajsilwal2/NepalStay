@@ -29,7 +29,7 @@
 
 ### 5. Seed File Type Error
 **Before:** 
-```
+```text
 Type 'string' is not assignable to type 'RoomType'
 ```
 **After:** 

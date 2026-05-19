@@ -109,7 +109,7 @@ interface RoomData {
 #### Login Page (`app/(auth)/login/page.tsx`)
 Updated demo credentials box to match actual seed data:
 
-```
+```text
 Admin:    admin@nepalstay.com / admin123
 Vendor:   rajesh@urbanboutique.com / password123
 Staff:    ramesh@urbanboutique.com / password123
@@ -118,7 +118,7 @@ Customer (Foreign): foreign@example.com / password123
 ```
 
 **Previous (incorrect):**
-```
+```text
 Admin:    admin@nepalstay.com / admin123
 Vendor:   vendor1@nepalstay.com / password123
 Staff:    staff@nepalstay.com / password123

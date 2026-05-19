@@ -63,8 +63,12 @@ export async function POST(req: NextRequest) {
     }
     const room = await prisma.room.create({ data: { ...parsed.data, hotelId: hotel.id } });
 
-    // Auto-update hotelSize and staffEnabled based on total room count
-    const totalRooms = await prisma.room.count({ where: { hotelId: hotel.id, isActive: true } });
+    // Auto-update hotelSize and staffEnabled based on total room units (summed totalRooms)
+    const roomAgg = await prisma.room.aggregate({
+      where: { hotelId: hotel.id, isActive: true },
+      _sum: { totalRooms: true }
+    });
+    const totalRooms = roomAgg._sum.totalRooms || 0;
     const newSize    = totalRooms >= 20 ? "LARGE" : totalRooms >= 12 ? "MEDIUM" : "SMALL";
     const newStaffEnabled = totalRooms >= 12;
 

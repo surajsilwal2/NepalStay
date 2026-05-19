@@ -82,28 +82,28 @@ npm run dev
 ## Test 5: Login with Demo Credentials
 
 ### Nepali Customer:
-```
+```text
 Email: traveler@example.com
 Password: password123
 ```
 **Expected:** Login successful, dashboard loads
 
 ### Foreign Customer:
-```
+```text
 Email: foreign@example.com
 Password: password123
 ```
 **Expected:** Login successful, dashboard loads
 
 ### Vendor:
-```
+```text
 Email: rajesh@urbanboutique.com
 Password: password123
 ```
 **Expected:** Login successful, vendor dashboard loads
 
 ### Admin:
-```
+```text
 Email: admin@nepalstay.com
 Password: admin123
 ```
@@ -178,7 +178,7 @@ SEED_MODE=demo npm run seed
 ```
 
 **Verify console output:**
-```
+```text
 ✅ Cleaned up
 ✅ Users created
 ✅ Hotels created
