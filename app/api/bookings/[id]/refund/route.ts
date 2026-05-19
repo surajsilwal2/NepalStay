@@ -18,15 +18,36 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       where: { id: params.id },
       include: {
         user:  { select: { id: true, name: true, email: true } },
-        hotel: { select: { name: true } },
+        hotel: { select: { name: true, vendorId: true } },
         room:  { select: { name: true, status: true } },
       },
     });
 
     if (!booking) return NextResponse.json({ success: false, error: "Booking not found" }, { status: 404 });
 
+    // Admin cannot process refunds — only customers, vendors, and staff can
+    if (user.role === "ADMIN") {
+      return NextResponse.json({ success: false, error: "Admins cannot process refunds. Contact the hotel directly." }, { status: 403 });
+    }
+
     if (user.role === "CUSTOMER" && booking.userId !== user.id) {
       return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
+
+    // Vendor: can only refund bookings for their own hotel
+    if (user.role === "VENDOR" && booking.hotel.vendorId !== user.id) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
+
+    // Staff: can only refund bookings for their assigned hotel
+    if (user.role === "STAFF") {
+      const staffUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { staffHotelId: true },
+      });
+      if (staffUser?.staffHotelId !== booking.hotelId) {
+        return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+      }
     }
 
     if (!["PENDING", "CONFIRMED"].includes(booking.status)) {

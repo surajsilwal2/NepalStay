@@ -3,7 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { z } from "zod";
-import { calculateTotalPrice, calculateNights } from "@/lib/booking";
+import { calculateNights } from "@/lib/booking";
+import { getDynamicPrice } from "@/lib/dynamic-pricing";
 import { addDays } from "date-fns";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,9 @@ const schema = z
     adults: z.number().int().min(1).default(1),
     children: z.number().int().min(0).default(0),
     notes: z.string().nullish(),
+    guestNationality: z.string().nullish(), // actual country name (e.g. "Indian")
+    passportNumber: z.string().nullish(),    // required for FNMIS
+    purposeOfVisit: z.string().nullish(),    // for FNMIS
   })
   .refine((d) => new Date(d.checkOut) > new Date(d.checkIn), {
     message: "Check-out must be after check-in",
@@ -138,8 +142,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { hotelId, roomId, checkIn, checkOut, adults, children, notes } =
-      parsed.data;
+    const { hotelId, roomId, checkIn, checkOut, adults, children, notes,
+            guestNationality, passportNumber, purposeOfVisit } = parsed.data;
 
     const userId = (session.user as any).id;
 
@@ -197,11 +201,9 @@ export async function POST(req: NextRequest) {
     }
 
     const nights = calculateNights(checkInDate, checkOutDate);
-    const totalPrice = calculateTotalPrice(
-      room.pricePerNight,
-      checkInDate,
-      checkOutDate,
-    );
+    // Apply dynamic (seasonal) pricing — same logic as client-side UI display
+    const priceInfo = getDynamicPrice(room.pricePerNight, checkInDate);
+    const totalPrice = priceInfo.price * nights;
 
     // ────────────────────────────────
     // FNMIS logic (READ FROM USER ONLY)
@@ -251,6 +253,8 @@ export async function POST(req: NextRequest) {
             status: "PENDING",
             paymentStatus: "UNPAID",
             fnmisDeadline,
+            guestNationality: guestNationality ?? null,
+            passportNumber: passportNumber ?? null,
           },
           include: {
             room: { select: { name: true, type: true, floor: true } },

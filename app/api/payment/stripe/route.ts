@@ -40,7 +40,9 @@ export async function POST(req: NextRequest) {
     if (booking.paidAt) return NextResponse.json({ success: false, error: `This booking is already paid via ${booking.paymentMethod ?? "Khalti"}. Invoice: ${booking.invoiceNumber}` }, { status: 409 });
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "https://nepal-stay.vercel.app";
-    const amountInCents = Math.max(50, Math.round((booking.totalPrice / 133) * 100));
+    // Exchange rate: NPR to USD (configurable via env, defaults to 0.0076 = 1 NPR ≈ 0.76 cents USD)
+    const exchangeRate = parseFloat(process.env.NPR_TO_USD_RATE || "0.0076");
+    const amountInCents = Math.max(50, Math.round(booking.totalPrice * exchangeRate * 100));
 
     let stripe: Stripe;
     try {

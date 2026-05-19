@@ -15,6 +15,14 @@ import KhaltiButton from "@/components/KhaltiButton";
 import StripeButton from "./StripeButton";
 import { getDynamicPrice } from "@/lib/dynamic-pricing";
 
+// Country names for foreign guests
+const FOREIGN_COUNTRIES = [
+  "Indian", "Chinese", "American", "British", "German",
+  "French", "Japanese", "Australian", "Canadian", "Korean",
+  "Bangladeshi", "Pakistani", "Sri Lankan", "Thai", "Singaporean",
+  "Other",
+];
+
 type Room = {
   id: string; name: string; type: string; pricePerNight: number;
   floor: number; capacity: number; amenities: string[];
@@ -59,6 +67,10 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
 
   const [nationality, setNationality] =
     useState(userNationality);
+
+  // Actual country name for foreign guests (separate from FNMIS enum)
+  // Default to empty so user MUST select a country
+  const [guestCountry, setGuestCountry] = useState("");
 
   const [passportNumber, setPassportNumber] =
     useState(userPassport);
@@ -118,6 +130,13 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
   const totalPrice =
     nights > 0 ? nights * room.pricePerNight : 0;
 
+  // Dynamic (seasonal) price — matches server-side calculation
+  const finalPrice = (() => {
+    if (!checkInDate || nights <= 0) return totalPrice;
+    const pi = getDynamicPrice(room.pricePerNight, checkInDate);
+    return pi.price * nights;
+  })();
+
   const isForeigner = nationality === "FOREIGN";
 
   const toInputVal = (d: Date | null) =>
@@ -130,6 +149,9 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
     if (nights <= 0) { setError("Check-out must be after check-in."); return; }
     if (adults + children > room.capacity) {
       setError(`Max capacity is ${room.capacity} guests.`); return;
+    }
+    if (isForeigner && !guestCountry.trim()) {
+      setError("Please select your country."); return;
     }
     if (isForeigner && !passportNumber.trim()) {
       setError("Passport number is required for foreign guests (FNMIS)."); return;
@@ -144,7 +166,8 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
         checkIn:  checkInDate.toISOString(),
         checkOut: checkOutDate.toISOString(),
         adults, children, notes,
-        guestNationality: nationality,
+        // guestNationality stores the human-readable country name
+        guestNationality: isForeigner ? guestCountry : "Nepali",
         passportNumber:   passportNumber || null,
         purposeOfVisit,
       }),
@@ -200,7 +223,7 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
                   Your reservation is pending confirmation.
                 </p>
               </div>
-              <div className="border-t border-slate-100 pt-4">
+                <div className="border-t border-slate-100 pt-4">
                 <p className="text-sm text-slate-600 mb-3 font-medium">
                   Pay now to confirm instantly:
                 </p>
@@ -208,14 +231,14 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
                 {nationality === "NEPALI" && (
                   <KhaltiButton
                     bookingId={bookingId}
-                    amount={totalPrice}
+                    amount={finalPrice}
                     onSuccess={onSuccess}
                   />
                 )}
 
                 {/* Foreign guests → Stripe card payment */}
                 {nationality === "FOREIGN" && (
-                  <StripeButton bookingId={bookingId} amount={totalPrice} />
+                  <StripeButton bookingId={bookingId} amount={finalPrice} />
                 )}
 
                 {/* Cash on arrival — available to everyone */}
@@ -355,16 +378,23 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
                 </div>
               </div>
 
-              {/* Nationality - Only show for foreign guests */}
+              {/* Country / Nationality — dropdown for foreign guests */}
               {isForeigner && (
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
                     <Globe className="w-3 h-3 inline mr-1" />
-                    Nationality
+                    Country / Nationality
                   </label>
-                  <div className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 text-slate-700 font-medium">
-                    Foreign Tourist
-                  </div>
+                  <select
+                    value={guestCountry}
+                    onChange={(e) => setGuestCountry(e.target.value)}
+                    className={inputCls}
+                  >
+                    <option value="">— Select your country —</option>
+                    {FOREIGN_COUNTRIES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
                 </div>
               )}
 

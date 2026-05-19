@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Building2, Users, CalendarCheck, TrendingUp, TrendingDown,
-  AlertTriangle, CheckCircle, Clock, Globe, FileText, ArrowRight,
-  BedDouble, Star,
+  AlertTriangle, Globe, FileText, ArrowRight,
+  Star, Store, MessageSquareWarning,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useToast } from "@/components/providers/ToastContext";
@@ -13,7 +13,7 @@ type Stats = {
   totalHotels: number; pendingHotels: number; approvedHotels: number;
   totalUsers: number; totalBookings: number; pendingBookings: number;
   revenueThisMonth: number; revenueLastMonth: number; revenueGrowth: number;
-  pendingRefunds: number; fnmisPending: number;
+  pendingRefunds: number; fnmisPending: number; pendingComplaints: number;
   rooms: Record<string, number>;
 };
 
@@ -58,7 +58,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Alert banners */}
-        {(stats.pendingHotels > 0 || stats.pendingRefunds > 0 || stats.fnmisPending > 0) && (
+        {(stats.pendingHotels > 0 || stats.pendingRefunds > 0 || stats.fnmisPending > 0 || (stats.pendingComplaints ?? 0) > 0) && (
           <div className="space-y-2 mb-6">
             {stats.pendingHotels > 0 && (
               <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
@@ -90,11 +90,23 @@ export default function AdminDashboard() {
               <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl">
                 <Globe className="w-5 h-5 text-red-600 flex-shrink-0" />
                 <p className="flex-1 font-semibold text-red-800 text-sm">
-                  {stats.fnmisPending} overdue FNMIS report{stats.fnmisPending > 1 ? "s" : ""} — action required
+                  {stats.fnmisPending} overdue FNMIS record{stats.fnmisPending > 1 ? "s" : ""} — action required
                 </p>
                 <Link href="/admin/fnmis"
                   className="text-xs px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium whitespace-nowrap">
                   View →
+                </Link>
+              </div>
+            )}
+            {(stats.pendingComplaints ?? 0) > 0 && (
+              <div className="flex items-center gap-3 p-4 bg-purple-50 border border-purple-200 rounded-2xl">
+                <MessageSquareWarning className="w-5 h-5 text-purple-600 flex-shrink-0" />
+                <p className="flex-1 font-semibold text-purple-800 text-sm">
+                  {stats.pendingComplaints} open complaint{stats.pendingComplaints > 1 ? "s" : ""} require attention
+                </p>
+                <Link href="/admin/complaints"
+                  className="text-xs px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium whitespace-nowrap">
+                  Review →
                 </Link>
               </div>
             )}
@@ -154,9 +166,11 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {[
               { href: "/admin/hotels",   icon: Building2,    label: "Hotel Approvals",   sub: `${stats.pendingHotels} pending` },
+              { href: "/admin/vendors",  icon: Store,        label: "Vendor Management",  sub: "All hotel owners" },
               { href: "/admin/bookings", icon: CalendarCheck,label: "All Bookings",       sub: `${stats.totalBookings} total` },
               { href: "/admin/users",    icon: Users,        label: "User Management",    sub: `${stats.totalUsers} accounts` },
               { href: "/admin/fnmis",    icon: Globe,        label: "FNMIS Reports",      sub: `${stats.fnmisPending} overdue` },
+              { href: "/admin/complaints",icon: MessageSquareWarning, label: "Complaints", sub: `${stats.pendingComplaints ?? 0} open` },
               { href: "/admin/reviews",  icon: Star,         label: "Review Moderation",  sub: "Manage guest reviews" },
               { href: "/admin/audit",    icon: FileText,     label: "Audit Report",       sub: "IRD-compliant export" },
             ].map(({ href, icon: Icon, label, sub }) => (

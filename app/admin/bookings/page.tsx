@@ -49,7 +49,6 @@ export default function AdminBookingsPage() {
   const [loading, setLoading]     = useState(true);
   const [filter, setFilter]       = useState("ALL");
   const [working, setWorking]     = useState<string | null>(null);
-  const [confirmRefund, setConfirmRefund] = useState<string | null>(null);
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
@@ -62,18 +61,6 @@ export default function AdminBookingsPage() {
   }, [filter]);
 
   useEffect(() => { fetchBookings(); }, [fetchBookings]);
-
-  const updateStatus = async (id: string, status: string) => {
-    setWorking(id);
-    const res  = await fetch(`/api/bookings/${id}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    const data = await res.json();
-    if (!data.success) toastError(data.error || "Update failed");
-    await fetchBookings();
-    setWorking(null);
-  };
 
   const issueInvoice = async (id: string) => {
     setWorking(id + "_inv");
@@ -88,20 +75,6 @@ export default function AdminBookingsPage() {
     } else {
       toastError(data.error);
     }
-    await fetchBookings();
-    setWorking(null);
-  };
-
-  const completeRefund = async (id: string) => {
-    if (confirmRefund !== id) { setConfirmRefund(id); return; }
-    setConfirmRefund(null);
-    setWorking(id + "_refund");
-    const res  = await fetch("/api/admin/refunds", {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bookingId: id }),
-    });
-    const data = await res.json();
-    if (data.success) toastSuccess(data.message); else toastError(data.error);
     await fetchBookings();
     setWorking(null);
   };
@@ -142,7 +115,7 @@ export default function AdminBookingsPage() {
               <p className="font-semibold text-orange-800 text-sm">
                 {pendingRefundCount} refund{pendingRefundCount > 1 ? "s" : ""} require manual processing
               </p>
-              <p className="text-orange-600 text-xs mt-0.5">Khalti auto-refund failed. Click "Mark Done" after completing the bank transfer.</p>
+              <p className="text-orange-600 text-xs mt-0.5">Refund pending. Contact hotel to confirm manual transfer completion.</p>
             </div>
             <button onClick={() => setFilter("CANCELLED")}
               className="text-xs px-3 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium whitespace-nowrap">
@@ -229,19 +202,7 @@ export default function AdminBookingsPage() {
                               <p className="text-xs text-slate-400">NPR {b.refundAmount.toLocaleString()} ({b.refundPercent}%)</p>
                             )}
                             {b.refundStatus === "PENDING" && (
-                              confirmRefund === b.id ? (
-                                <div className="flex items-center gap-1 mt-1">
-                                  <button onClick={() => completeRefund(b.id)}
-                                    className="text-xs px-2 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">Yes</button>
-                                  <button onClick={() => setConfirmRefund(null)}
-                                    className="text-xs px-2 py-1 border border-slate-200 text-slate-500 rounded-lg">No</button>
-                                </div>
-                              ) : (
-                                <button onClick={() => completeRefund(b.id)} disabled={working === b.id + "_refund"}
-                                  className="flex items-center gap-1 text-xs px-2 py-1 bg-green-50 border border-green-300 text-green-700 rounded-lg hover:bg-green-100 disabled:opacity-50 mt-1">
-                                  <DollarSign className="w-3 h-3" />Mark Done
-                                </button>
-                              )
+                              <p className="text-xs text-slate-500">Contact hotel to confirm.</p>
                             )}
                           </div>
                         ) : <span className="text-xs text-slate-300">—</span>}
@@ -262,20 +223,7 @@ export default function AdminBookingsPage() {
                         ) : <span className="text-xs text-slate-300">—</span>}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex flex-col gap-1">
-                          {b.status === "PENDING" && (
-                            <button onClick={() => updateStatus(b.id, "CONFIRMED")} disabled={!!working}
-                              className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 whitespace-nowrap">Confirm</button>
-                          )}
-                          {b.status === "CONFIRMED" && (
-                            <button onClick={() => updateStatus(b.id, "CHECKED_IN")} disabled={!!working}
-                              className="text-xs px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 whitespace-nowrap">Check In</button>
-                          )}
-                          {b.status === "CHECKED_IN" && (
-                            <button onClick={() => updateStatus(b.id, "CHECKED_OUT")} disabled={!!working}
-                              className="text-xs px-2 py-1 bg-slate-600 text-white rounded hover:bg-slate-700 disabled:opacity-50 whitespace-nowrap">Check Out</button>
-                          )}
-                        </div>
+                        <p className="text-xs text-slate-400">Managed by hotel staff</p>
                       </td>
                     </tr>
                   ))

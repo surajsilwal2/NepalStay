@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
       totalUsers, totalBookings, pendingBookings,
       revenueThis, revenueLast,
       pendingRefunds, fnmisPending,
+      pendingComplaints,
       roomCounts,
     ] = await Promise.all([
       prisma.hotel.count(),
@@ -43,6 +44,7 @@ export async function GET(req: NextRequest) {
       }),
       prisma.booking.count({ where: { refundStatus: "PENDING" } }),
       prisma.booking.count({ where: { fnmisOverdue: true, fnmisReported: false } }),
+      prisma.complaint.count({ where: { status: { in: ["OPEN", "INVESTIGATING"] } } }),
       prisma.room.groupBy({ by: ["status"], _count: true }),
     ]);
 
@@ -59,6 +61,7 @@ export async function GET(req: NextRequest) {
         revenueLastMonth: lastRev,
         revenueGrowth: lastRev > 0 ? Math.round(((thisRev - lastRev) / lastRev) * 1000) / 10 : 0,
         pendingRefunds, fnmisPending,
+        pendingComplaints,
         rooms,
       },
     });
