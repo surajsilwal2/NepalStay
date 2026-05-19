@@ -37,6 +37,7 @@ const NAV_LINKS = {
     { href: "/stats", label: "Statistics", icon: BarChart2 },
     { href: "/customer/bookings", label: "My Bookings", icon: CalendarCheck },
     { href: "/customer/wishlist", label: "Wishlist", icon: Heart },
+    { href: "/customer/complaints", label: "Complaints", icon: MessageSquareWarning },
     { href: "/customer/profile", label: "Profile", icon: Users },
   ],
   VENDOR: [
@@ -57,8 +58,7 @@ const NAV_LINKS = {
     { href: "/admin/hotels", label: "Hotels", icon: Building2 },
     { href: "/admin/vendors", label: "Vendors", icon: Store },
     { href: "/admin/bookings", label: "Bookings", icon: CalendarCheck },
-    { href: "/admin/users", label: "Users", icon: Users },
-    { href: "/admin/reviews", label: "Reviews", icon: Star },
+    { href: "/admin/complaints", label: "Complaints", icon: MessageSquareWarning },
     { href: "/admin/fnmis", label: "FNMIS", icon: Globe },
     { href: "/admin/audit", label: "Audit", icon: FileText },
     { href: "/stats", label: "Stats", icon: BarChart2 },

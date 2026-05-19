@@ -155,13 +155,18 @@ export default function VendorRoomsPage() {
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
+      
+      // Update local state immediately
       setRooms(prev => prev.map(r => r.id === roomId ? { ...r, status: newStatus } : r));
       toastSuccess(`Room marked as ${newStatus.toLowerCase()}`);
+      
+      // Re-fetch after 1s to ensure database update is complete
+      setTimeout(fetchRooms, 1000);
     } catch (e: any) {
       toastError(e.message || "Failed to update status");
-      setRooms(prev => [...prev]);
+      setRooms(prev => [...prev]); // trigger re-render to revert
     } finally {
-      setOptimistic(p => { const n = { ...p }; delete n[roomId]; return n; });
+      setOptimistic(p => { const n = {...p}; delete n[roomId]; return n; });
     }
   };
 

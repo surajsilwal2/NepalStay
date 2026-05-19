@@ -1,0 +1,2 @@
+Users management API endpoint has been disabled.
+See /app/admin/users/page.tsx for details.

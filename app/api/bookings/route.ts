@@ -282,7 +282,23 @@ export async function POST(req: NextRequest) {
 
     if (error.message?.startsWith("CONFLICT:")) {
       return NextResponse.json(
-        { success: false, error: error.message.replace("CONFLICT:", "") },
+        { success: false, error: error.message.replace("CONFLICT:", "").trim() },
+        { status: 409 },
+      );
+    }
+
+    // Prisma unique constraint (e.g. duplicate bookingId edge case)
+    if (error?.code === "P2002") {
+      return NextResponse.json(
+        { success: false, error: "A booking for this room already exists. Please try again." },
+        { status: 409 },
+      );
+    }
+
+    // Prisma record not found inside transaction
+    if (error?.code === "P2025") {
+      return NextResponse.json(
+        { success: false, error: "Room or hotel no longer available." },
         { status: 409 },
       );
     }
@@ -290,7 +306,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to create booking",
+        error: "Failed to create booking. Please refresh and try again.",
         detail: process.env.NODE_ENV !== "production" ? String(error) : undefined,
       },
       { status: 500 },

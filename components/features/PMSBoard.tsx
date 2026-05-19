@@ -159,15 +159,16 @@ function RoomDetailPanel({
           )}
         </div>
 
-        {/* Local status change controls (client-only) */}
+        {/* Persistent status change controls */}
         <div className="mt-4">
-          <div className="text-xs text-slate-500 mb-2">Change status (local preview)</div>
+          <div className="text-xs text-slate-500 mb-2 font-medium">Change Room Status</div>
           <div className="flex gap-2 flex-wrap">
             {(Object.keys(STATUS_CFG) as RoomStatus[]).map(s => (
               <button
                 key={s}
                 onClick={() => onLocalStatusChange?.(room.id, s)}
-                className={`px-3 py-1 rounded-full text-xs font-medium ${room.status === s ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700'}`}
+                disabled={room.status === s}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${room.status === s ? 'bg-slate-800 text-white cursor-default' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
               >{STATUS_CFG[s].label}</button>
             ))}
           </div>
@@ -310,8 +311,9 @@ function Skeleton() {
 // ─── Main Board ───────────────────────────────────────────────────────────────
 
 export default function PMSBoard() {
-  const { error: toastError } = useToast();
+  const { error: toastError, success: toastSuccess } = useToast();
   const [data, setData]             = useState<PmsData | null>(null);
+  const [updatingRoom, setUpdatingRoom] = useState<string | null>(null);
   const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -589,18 +591,36 @@ export default function PMSBoard() {
       {/* ── Room detail modal ── */}
       {selectedRoom && (
             <RoomDetailPanel
-              room={selectedRoom}
+              room={updatingRoom === selectedRoom.id ? { ...selectedRoom } : selectedRoom}
               onClose={() => setSelectedRoom(null)}
-              // local-only status change handler
-              onLocalStatusChange={(roomId, newStatus) => {
-                // update state locally, immutable
-                setData(prev => {
-                  if (!prev) return prev;
-                  const rooms = prev.rooms.map(r => r.id === roomId ? { ...r, status: newStatus as RoomStatus } : r);
-                  const floorMap = prev.floorMap.map(f => ({ ...f, rooms: f.rooms.map(rr => rr.id === roomId ? { ...rr, status: newStatus as RoomStatus } : rr) }));
-                  const timeline = prev.timeline; // keep same timeline for now
-                  return { ...prev, rooms, floorMap, timeline };
-                });
+              onLocalStatusChange={async (roomId, newStatus) => {
+                if (updatingRoom) return; // prevent double-click
+                setUpdatingRoom(roomId);
+                try {
+                  const res = await fetch(`/api/staff/rooms/${roomId}/status`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ status: newStatus }),
+                  });
+                  const json = await res.json();
+                  if (!json.success) throw new Error(json.error || "Failed to update");
+                  // Update local state optimistically after API confirms
+                  setData(prev => {
+                    if (!prev) return prev;
+                    const rooms = prev.rooms.map(r => r.id === roomId ? { ...r, status: newStatus } : r);
+                    const floorMap = prev.floorMap.map(f => ({
+                      ...f,
+                      rooms: f.rooms.map(rr => rr.id === roomId ? { ...rr, status: newStatus } : rr),
+                    }));
+                    return { ...prev, rooms, floorMap };
+                  });
+                  setSelectedRoom(prev => prev?.id === roomId ? { ...prev, status: newStatus } : prev);
+                  toastSuccess(`Room marked as ${newStatus.toLowerCase()}`);
+                } catch (err: any) {
+                  toastError(err.message || "Failed to update room status");
+                } finally {
+                  setUpdatingRoom(null);
+                }
               }}
             />
       )}
