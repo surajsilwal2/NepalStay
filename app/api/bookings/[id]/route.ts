@@ -48,6 +48,36 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     });
     if (!booking) return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
 
+    // Vendor: can only update bookings that belong to their hotel
+    if (user.role === "VENDOR") {
+      if (booking.hotel.vendorId !== user.id) {
+        return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+      }
+    }
+
+    // Staff: can only update bookings for their assigned hotel
+    if (user.role === "STAFF") {
+      const staffUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { staffHotelId: true, isActive: true },
+      });
+      if (!staffUser?.staffHotelId || staffUser.staffHotelId !== booking.hotelId) {
+        return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+      }
+      // Verify staff account is enabled
+      if (!staffUser.isActive) {
+        return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+      }
+      // Verify hotel is enabled
+      const hotel = await prisma.hotel.findUnique({
+        where: { id: booking.hotelId },
+        select: { status: true },
+      });
+      if (!hotel || hotel.status !== "APPROVED") {
+        return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+      }
+    }
+
     // Customers can only cancel their own unpaid bookings
     if (user.role === "CUSTOMER") {
       if (booking.userId !== user.id) {

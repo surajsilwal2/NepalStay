@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST — create hotel listing (pending admin approval)
+// POST — create hotel listing (pending admin approval) or update if already exists
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -68,7 +68,8 @@ export async function POST(req: NextRequest) {
     }
     const existing = await prisma.hotel.findUnique({ where: { vendorId: (session.user as any).id } });
     if (existing) {
-      return NextResponse.json({ success: false, error: "You already have a hotel listing" }, { status: 409 });
+      // If hotel exists, use PUT to update it instead
+      return NextResponse.json({ success: false, error: "Hotel already exists. Use update endpoint to modify." }, { status: 409 });
     }
     const body   = await req.json();
     const parsed = hotelSchema.safeParse(body);

@@ -1,10 +1,10 @@
 "use client";
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, User, CalendarCheck, Heart } from "lucide-react";
+import { Loader2, CalendarCheck, Heart } from "lucide-react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import AvatarUploader from "@/components/AvatarUploader";
@@ -33,11 +33,34 @@ export default function ProfilePage() {
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } =
     useForm<Form>({ resolver: zodResolver(schema), defaultValues: { name: "", phone: "", address: "" } });
 
+  // Fetch full profile from API — phone/address are NOT stored in the JWT,
+  // so we must fetch them separately to populate the form correctly.
+  const fetchProfile = useCallback(() => {
+    fetch("/api/user/profile")
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.data) {
+          reset({
+            name:    d.data.name    ?? "",
+            phone:   d.data.phone   ?? "",
+            address: d.data.address ?? "",
+          });
+        }
+      })
+      .catch((err) => {
+        // Fallback: reset with defaults from session and show error
+        reset({
+          name:    session?.user?.name ?? "",
+          phone:   "",
+          address: "",
+        });
+        toastError("Failed to load profile. Please refresh.");
+      });
+  }, [reset, session?.user?.name, toastError]);
+
   useEffect(() => {
-    if (user?.name !== undefined) {
-      reset({ name: user.name ?? "", phone: user.phone ?? "", address: user.address ?? "" });
-    }
-  }, [user?.name, user?.phone, user?.address, reset]);
+    if (session) fetchProfile();
+  }, [session, fetchProfile]);
 
   const onSubmit = async (data: Form) => {
     const res  = await fetch("/api/user/profile", {
@@ -152,6 +175,42 @@ export default function ProfilePage() {
                 Nationality is set during registration
               </p>
             </div>
+
+            {/* Passport Number - Only show for Foreign tourists */}
+            {user?.nationality === "FOREIGN" && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Passport Number
+                </label>
+                <input
+                  type="text"
+                  value={user?.passportNumber ?? ""}
+                  disabled
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 text-slate-600"
+                />
+                <p className="mt-1 text-xs text-slate-400">
+                  Passport information is set during registration
+                </p>
+              </div>
+            )}
+
+            {/* Purpose of Visit - Only show for Foreign tourists */}
+            {user?.nationality === "FOREIGN" && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Purpose of Visit
+                </label>
+                <input
+                  type="text"
+                  value={user?.purposeOfVisit ?? ""}
+                  disabled
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 text-slate-600"
+                />
+                <p className="mt-1 text-xs text-slate-400">
+                  Purpose is set during registration
+                </p>
+              </div>
+            )}
 
             <button
               type="submit"
