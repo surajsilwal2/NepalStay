@@ -180,6 +180,54 @@ No database schema changes were required. All fixes work with existing fields:
 
 ## Demo Credentials
 
+The following demo accounts are available for local testing and development.
+
+> **Security Note**
+>
+> Demo passwords must never be committed to the repository.
+> Actual credentials should be configured locally via seed/bootstrap scripts
+> or environment-specific setup files that are excluded from version control.
+
+For actual local credentials, see:
+
+- Local seed/bootstrap documentation
+- Prisma seed file
+- Environment setup instructions
+
+### National Customer
+
+- Email: `customer@nepalstay.local`
+- Password: `<DEMO_PASSWORD>`
+- Nationality: NEPALI
+- Role: CUSTOMER
+
+### Foreign Tourist
+
+- Email: `tourist@nepalstay.local`
+- Password: `<DEMO_PASSWORD>`
+- Nationality: FOREIGN
+- Passport: `AB123456`
+- Role: CUSTOMER
+
+### Vendor (Hotel Owner)
+
+- Email: `vendor@nepalstay.local`
+- Password: `<DEMO_PASSWORD>`
+- Role: VENDOR
+
+### Admin
+
+- Email: `admin@nepalstay.local`
+- Password: `<DEMO_PASSWORD>`
+- Role: ADMIN
+
+### Staff
+
+- Email: `staff@nepalstay.local`
+- Password: `<DEMO_PASSWORD>`
+- Role: STAFF
+- Assigned Hotel: Demo Hotel
+
 The following demo accounts are available for testing:
 
 ### National Customer
