@@ -60,6 +60,8 @@ export async function GET(req: NextRequest) {
     const where = hotelId ? { hotelId } : {};
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
     const in7 = addDays(today, 7);
 
     // All rooms with active bookings

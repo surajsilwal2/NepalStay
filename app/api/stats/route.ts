@@ -60,11 +60,10 @@ export async function GET(req: NextRequest) {
         orderBy: { _count: { id: "desc" } },
       }),
 
-      // Foreign guest count (FNMIS)
+      // Foreign guest count (FNMIS) — users with FOREIGN nationality
       prisma.booking.count({
         where: {
-          passportNumber: { not: null },
-          guestNationality: { not: "Nepali" },
+          user: { nationality: "FOREIGN" },
           status: { in: ["CONFIRMED", "CHECKED_IN", "CHECKED_OUT"] },
         },
       }),

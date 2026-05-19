@@ -92,7 +92,20 @@ export default function VendorHotelPage() {
     setSaving(false);
     if (!json.success) { toastError(json.error); return; }
     toastSuccess(hotel ? "Hotel updated successfully" : "Hotel submitted for approval!");
-    if (!hotel) setHotel(json.data);
+    if (!hotel) {
+      setHotel(json.data);
+      // Update form with new hotel data for smooth transition
+      reset({
+        name: json.data.name, description: json.data.description, city: json.data.city, address: json.data.address,
+        latitude: json.data.latitude ?? undefined, longitude: json.data.longitude ?? undefined,
+        starRating: json.data.starRating, propertyType: json.data.propertyType,
+        contactPhone: json.data.contactPhone ?? "", contactEmail: json.data.contactEmail ?? "",
+        website: json.data.website ?? "",
+        checkIn: json.data.policies?.checkIn ?? "14:00",
+        checkOut: json.data.policies?.checkOut ?? "11:00",
+        cancellation: json.data.policies?.cancellation ?? "",
+      });
+    }
   };
 
   const inputCls = "w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500";

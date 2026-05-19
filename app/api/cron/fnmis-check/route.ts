@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     // Mark overdue — deadline passed and not reported
     const overdueResult = await prisma.booking.updateMany({
       where: {
-        passportNumber: { not: null },
+        user: { passportNumber: { not: null } },
         fnmisReported:  false,
         fnmisOverdue:   false,
         fnmisDeadline:  { lt: now },

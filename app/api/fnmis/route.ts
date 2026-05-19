@@ -20,9 +20,24 @@ export async function POST(req: NextRequest) {
       include: { user: true, room: true, hotel: true },
     });
     if (!booking) return NextResponse.json({ success: false, error: "Booking not found" }, { status: 404 });
-    if (!booking.passportNumber) {
+    if (!booking.user?.passportNumber) {
       return NextResponse.json({ success: false, error: "No passport number on record" }, { status: 400 });
     }
+
+    // Authorization check: ensure user can report this booking
+    const user = session.user as any;
+    if (user.role === "VENDOR") {
+      const hotel = await prisma.hotel.findUnique({ where: { vendorId: user.id } });
+      if (!hotel || hotel.id !== booking.hotelId) {
+        return NextResponse.json({ success: false, error: "Not authorized to report this booking" }, { status: 403 });
+      }
+    } else if (user.role === "STAFF") {
+      const staff = await prisma.user.findUnique({ where: { id: user.id } });
+      if (!staff?.staffHotelId || staff.staffHotelId !== booking.hotelId) {
+        return NextResponse.json({ success: false, error: "Not authorized to report this booking" }, { status: 403 });
+      }
+    }
+    // ADMIN can report any booking
 
     const updated = await prisma.booking.update({
       where: { id: bookingId },
@@ -37,7 +52,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       data: updated,
-      message: `FNMIS report submitted for ${booking.user.name} (${booking.passportNumber}).`,
+      message: `FNMIS report submitted for ${booking.user.name} (${booking.user.passportNumber}).`,
     });
   } catch (error) {
     console.error("[FNMIS_POST]", error);
@@ -53,15 +68,29 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
     }
 
+    const user = session.user as any;
+    let hotelFilter: any = {};
+
+    // Authorization: vendors and staff only see their hotel's bookings
+    if (user.role === "VENDOR") {
+      const hotel = await prisma.hotel.findUnique({ where: { vendorId: user.id } });
+      if (hotel) hotelFilter = { hotelId: hotel.id };
+    } else if (user.role === "STAFF") {
+      const staffUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (staffUser?.staffHotelId) hotelFilter = { hotelId: staffUser.staffHotelId };
+    }
+    // ADMIN sees all bookings
+
     const now = new Date();
     const bookings = await prisma.booking.findMany({
       where: {
-        passportNumber: { not: null },
+        user: { passportNumber: { not: null } },
         status: { in: ["CONFIRMED","CHECKED_IN","CHECKED_OUT"] },
+        ...hotelFilter,
       },
       orderBy: { fnmisDeadline: "asc" },
       include: {
-        user:  { select: { name: true, email: true } },
+        user:  { select: { name: true, email: true, passportNumber: true } },
         hotel: { select: { name: true, city: true } },
         room:  { select: { name: true } },
       },
