@@ -15,13 +15,7 @@ import KhaltiButton from "@/components/KhaltiButton";
 import StripeButton from "./StripeButton";
 import { getDynamicPrice } from "@/lib/dynamic-pricing";
 
-// Country names for foreign guests
-const FOREIGN_COUNTRIES = [
-  "Indian", "Chinese", "American", "British", "German",
-  "French", "Japanese", "Australian", "Canadian", "Korean",
-  "Bangladeshi", "Pakistani", "Sri Lankan", "Thai", "Singaporean",
-  "Other",
-];
+
 
 type Room = {
   id: string; name: string; type: string; pricePerNight: number;
@@ -35,10 +29,6 @@ interface Props {
   onSuccess: () => void;
 }
 
-const NATIONALITIES = [
-  "Nepali", "Indian", "Chinese", "American", "British", "German",
-  "French", "Japanese", "Australian", "Canadian", "Korean", "Other",
-];
 const PURPOSE_OPTIONS = ["Tourism", "Business", "Trekking", "Medical", "Education", "Transit"];
 
 export default function BookingModal({ room, hotel, onClose, onSuccess }: Props) {
@@ -68,9 +58,7 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
   const [nationality, setNationality] =
     useState(userNationality);
 
-  // Actual country name for foreign guests (separate from FNMIS enum)
-  // Default to empty so user MUST select a country
-  const [guestCountry, setGuestCountry] = useState("");
+  // Nationality (NEPALI / FOREIGN) is fixed at registration — read from profile only.
 
   const [passportNumber, setPassportNumber] =
     useState(userPassport);
@@ -150,9 +138,6 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
     if (adults + children > room.capacity) {
       setError(`Max capacity is ${room.capacity} guests.`); return;
     }
-    if (isForeigner && !guestCountry.trim()) {
-      setError("Please select your country."); return;
-    }
     if (isForeigner && !passportNumber.trim()) {
       setError("Passport number is required for foreign guests (FNMIS)."); return;
     }
@@ -166,8 +151,8 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
         checkIn:  checkInDate.toISOString(),
         checkOut: checkOutDate.toISOString(),
         adults, children, notes,
-        // guestNationality stores the human-readable country name
-        guestNationality: isForeigner ? guestCountry : "Nepali",
+        // guestNationality mirrors the user's profile nationality
+        guestNationality: isForeigner ? "Foreign" : "Nepali",
         passportNumber:   passportNumber || null,
         purposeOfVisit,
       }),
@@ -378,25 +363,7 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
                 </div>
               </div>
 
-              {/* Country / Nationality — dropdown for foreign guests */}
-              {isForeigner && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-                    <Globe className="w-3 h-3 inline mr-1" />
-                    Country / Nationality
-                  </label>
-                  <select
-                    value={guestCountry}
-                    onChange={(e) => setGuestCountry(e.target.value)}
-                    className={inputCls}
-                  >
-                    <option value="">— Select your country —</option>
-                    {FOREIGN_COUNTRIES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
+
 
               {/* FNMIS */}
               {isForeigner && (

@@ -142,15 +142,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { hotelId, roomId, checkIn, checkOut, adults, children, notes,
-            guestNationality, passportNumber, purposeOfVisit } = parsed.data;
+    const { hotelId, roomId, checkIn, checkOut, adults, children, notes } = parsed.data;
 
     const userId = (session.user as any).id;
 
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
 
-    if (checkInDate < new Date()) {
+    // Compare at day granularity to avoid timezone / clock-time issues.
+    // new Date("2025-05-19") resolves to midnight UTC; comparing it against
+    // the live server clock would wrongly reject same-day bookings.
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const checkInDay = new Date(checkIn);
+    checkInDay.setUTCHours(0, 0, 0, 0);
+
+    if (checkInDay < todayStart) {
       return NextResponse.json(
         { success: false, error: "Check-in cannot be in the past" },
         { status: 400 },
@@ -219,52 +226,48 @@ export async function POST(req: NextRequest) {
     // ────────────────────────────────
     // Transaction (safe booking)
     // ────────────────────────────────
-    const booking = await prisma.$transaction(
-      async (tx) => {
-        const overlappingCount = await tx.booking.count({
-          where: {
-            roomId,
-            status: {
-              in: ["PENDING", "CONFIRMED", "CHECKED_IN"],
-            },
-            AND: [
-              { checkIn: { lt: checkOutDate } },
-              { checkOut: { gt: checkInDate } },
-            ],
-          },
-        });
+    // Note: isolationLevel "Serializable" is intentionally omitted —
+    // PgBouncer (Supabase pooled connection) does not support it.
+    // The count-then-create pattern inside a single transaction is sufficient.
+    const booking = await prisma.$transaction(async (tx) => {
+      const overlappingCount = await tx.booking.count({
+        where: {
+          roomId,
+          status: { in: ["PENDING", "CONFIRMED", "CHECKED_IN"] },
+          AND: [
+            { checkIn: { lt: checkOutDate } },
+            { checkOut: { gt: checkInDate } },
+          ],
+        },
+      });
 
-        if (overlappingCount >= room.totalRooms) {
-          throw new Error("CONFLICT: Room not available for selected dates");
-        }
+      if (overlappingCount >= room.totalRooms) {
+        throw new Error("CONFLICT: Room not available for selected dates");
+      }
 
-        return tx.booking.create({
-          data: {
-            userId,
-            hotelId,
-            roomId,
-            checkIn: checkInDate,
-            checkOut: checkOutDate,
-            nights,
-            adults,
-            children,
-            notes: notes ?? undefined,
-            totalPrice,
-            status: "PENDING",
-            paymentStatus: "UNPAID",
-            fnmisDeadline,
-            guestNationality: guestNationality ?? null,
-            passportNumber: passportNumber ?? null,
-          },
-          include: {
-            room: { select: { name: true, type: true, floor: true } },
-            hotel: { select: { name: true, city: true } },
-            user: { select: { name: true, email: true } },
-          },
-        });
-      },
-      { isolationLevel: "Serializable" },
-    );
+      return tx.booking.create({
+        data: {
+          userId,
+          hotelId,
+          roomId,
+          checkIn: checkInDate,
+          checkOut: checkOutDate,
+          nights,
+          adults,
+          children,
+          notes: notes ?? undefined,
+          totalPrice,
+          status: "PENDING",
+          paymentStatus: "UNPAID",
+          fnmisDeadline,
+        },
+        include: {
+          room: { select: { name: true, type: true, floor: true } },
+          hotel: { select: { name: true, city: true } },
+          user: { select: { name: true, email: true } },
+        },
+      });
+    });
 
     return NextResponse.json(
       {
@@ -285,7 +288,11 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { success: false, error: "Failed to create booking" },
+      {
+        success: false,
+        error: "Failed to create booking",
+        detail: process.env.NODE_ENV !== "production" ? String(error) : undefined,
+      },
       { status: 500 },
     );
   }
