@@ -5,103 +5,93 @@ import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/fnmis — manually report a foreign guest to Tourist Police
-export async function POST(req: NextRequest) {
+// GET /api/fnmis — list foreign guest bookings (all for admin, hotel-scoped for vendor/staff)
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
-    if (
-      !session ||
-      !["ADMIN", "STAFF", "VENDOR"].includes(
-        (session.user as any).role
-      )
-    ) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 403 }
-      );
+    if (!session || !["ADMIN", "STAFF", "VENDOR"].includes((session.user as any).role)) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
     }
 
-    const { bookingId } = await req.json();
+    const user = session.user as any;
+    let hotelFilter: any = {};
 
-    if (!bookingId) {
-      return NextResponse.json(
-        { success: false, error: "bookingId required" },
-        { status: 400 }
-      );
+    if (user.role === "VENDOR") {
+      const hotel = await prisma.hotel.findUnique({ where: { vendorId: user.id } });
+      if (!hotel) return NextResponse.json({ success: false, error: "Hotel not found" }, { status: 404 });
+      hotelFilter = { hotelId: hotel.id };
+    } else if (user.role === "STAFF") {
+      const staffUser = await prisma.user.findUnique({ where: { id: user.id } });
+      if (!staffUser?.staffHotelId) return NextResponse.json({ success: false, error: "No hotel assigned" }, { status: 403 });
+      hotelFilter = { hotelId: staffUser.staffHotelId };
     }
 
-    const booking = await prisma.booking.findUnique({
-      where: { id: bookingId },
+    const now = new Date();
+    const bookings = await prisma.booking.findMany({
+      where: {
+        user: { nationality: "FOREIGN", passportNumber: { not: null } },
+        status: { in: ["CONFIRMED", "CHECKED_IN", "CHECKED_OUT"] },
+        ...hotelFilter,
+      },
+      orderBy: [{ fnmisReported: "asc" }, { fnmisDeadline: "asc" }],
       include: {
-        user: true,
-        room: true,
-        hotel: true,
+        user: {
+          select: { name: true, email: true, passportNumber: true, nationality: true, purposeOfVisit: true },
+        },
+        hotel: { select: { name: true, city: true } },
+        room:  { select: { name: true } },
       },
     });
 
-    if (!booking) {
-      return NextResponse.json(
-        { success: false, error: "Booking not found" },
-        { status: 404 }
-      );
+    const enriched = bookings.map(b => ({
+      ...b,
+      isOverdue: !b.fnmisReported && b.fnmisDeadline != null && b.fnmisDeadline < now,
+      hoursLeft: b.fnmisDeadline
+        ? Math.max(0, Math.round((b.fnmisDeadline.getTime() - now.getTime()) / 3600000))
+        : null,
+    }));
+
+    return NextResponse.json({ success: true, data: enriched });
+  } catch (error) {
+    console.error("[FNMIS_GET]", error);
+    return NextResponse.json({ success: false, error: "Failed to load FNMIS data" }, { status: 500 });
+  }
+}
+
+// POST /api/fnmis — mark a foreign guest booking as FNMIS-reported
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !["ADMIN", "STAFF", "VENDOR"].includes((session.user as any).role)) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
     }
 
-    if (!booking.user?.passportNumber) {
-      return NextResponse.json(
-        { success: false, error: "No passport number on record" },
-        { status: 400 }
-      );
+    const { bookingId } = await req.json();
+    if (!bookingId) return NextResponse.json({ success: false, error: "bookingId required" }, { status: 400 });
+
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { user: true, hotel: true },
+    });
+
+    if (!booking) return NextResponse.json({ success: false, error: "Booking not found" }, { status: 404 });
+    if (!booking.user?.passportNumber?.trim()) {
+      return NextResponse.json({ success: false, error: "No passport number on record for this guest" }, { status: 400 });
     }
 
-    // Authorization check
-    const user = session.user as any;
+    const actor = session.user as any;
 
-    if (user.role === "VENDOR") {
-      const hotel = await prisma.hotel.findUnique({
-        where: { vendorId: user.id },
-      });
-
-      if (!hotel) {
-        return NextResponse.json(
-          { success: false, error: "Forbidden" },
-          { status: 403 }
-        );
+    if (actor.role === "VENDOR") {
+      const hotel = await prisma.hotel.findUnique({ where: { vendorId: actor.id } });
+      if (!hotel || hotel.id !== booking.hotelId) {
+        return NextResponse.json({ success: false, error: "Not authorized to report this booking" }, { status: 403 });
       }
-
-      if (hotel.id !== booking.hotelId) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "Not authorized to report this booking",
-          },
-          { status: 403 }
-        );
-      }
-    } else if (user.role === "STAFF") {
-      const staffUser = await prisma.user.findUnique({
-        where: { id: user.id },
-      });
-
-      if (!staffUser?.staffHotelId) {
-        return NextResponse.json(
-          { success: false, error: "Forbidden" },
-          { status: 403 }
-        );
-      }
-
-      if (staffUser.staffHotelId !== booking.hotelId) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "Not authorized to report this booking",
-          },
-          { status: 403 }
-        );
+    } else if (actor.role === "STAFF") {
+      const staffUser = await prisma.user.findUnique({ where: { id: actor.id } });
+      if (!staffUser?.staffHotelId || staffUser.staffHotelId !== booking.hotelId) {
+        return NextResponse.json({ success: false, error: "Not authorized to report this booking" }, { status: 403 });
       }
     }
-
-    // ADMIN can report any booking
 
     const updated = await prisma.booking.update({
       where: { id: bookingId },
@@ -116,144 +106,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       data: updated,
-      message: `FNMIS report submitted for ${booking.user.name} (${booking.user.passportNumber}).`,
+      message: `FNMIS record marked for ${booking.user.name} (Passport: ${booking.user.passportNumber}).`,
     });
   } catch (error) {
     console.error("[FNMIS_POST]", error);
-
-    return NextResponse.json(
-      { success: false, error: "Failed" },
-      { status: 500 }
-    );
-  }
-}
-
-// GET /api/fnmis — list unreported/overdue foreign guest bookings
-export async function GET(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (
-      !session ||
-      !["ADMIN", "STAFF", "VENDOR"].includes(
-        (session.user as any).role
-      )
-    ) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 403 }
-      );
-    }
-
-    const user = session.user as any;
-    let hotelFilter: any = {};
-
-    // Authorization: vendors and staff only see their hotel's bookings
-    if (user.role === "VENDOR") {
-      const hotel = await prisma.hotel.findUnique({
-        where: { vendorId: user.id },
-      });
-
-      if (!hotel) {
-        return NextResponse.json(
-          { success: false, error: "Forbidden" },
-          { status: 403 }
-        );
-      }
-
-      hotelFilter = { hotelId: hotel.id };
-    } else if (user.role === "STAFF") {
-      const staffUser = await prisma.user.findUnique({
-        where: { id: user.id },
-      });
-
-      if (!staffUser?.staffHotelId) {
-        return NextResponse.json(
-          { success: false, error: "Forbidden" },
-          { status: 403 }
-        );
-      }
-
-      hotelFilter = { hotelId: staffUser.staffHotelId };
-    }
-
-    // ADMIN sees all bookings
-
-    const now = new Date();
-
-   const bookings = await prisma.booking.findMany({
-  where: {
-    fnmisReported: false,
-
-    user: {
-      passportNumber: {
-        notIn: [null, ""],
-      },
-    },
-
-    status: {
-      in: ["CONFIRMED", "CHECKED_IN", "CHECKED_OUT"],
-    },
-
-    ...hotelFilter,
-  },
-
-  orderBy: {
-    fnmisDeadline: "asc",
-  },
-
-  include: {
-    user: {
-      select: {
-        name: true,
-        email: true,
-        passportNumber: true,
-      },
-    },
-
-    hotel: {
-      select: {
-        name: true,
-        city: true,
-      },
-    },
-
-    room: {
-      select: {
-        name: true,
-      },
-    },
-  },
-});
-
-    // Flag overdue in memory
-    const enriched = bookings.map((b) => ({
-      ...b,
-      isOverdue:
-        !b.fnmisReported &&
-        b.fnmisDeadline &&
-        b.fnmisDeadline < now,
-
-      hoursLeft: b.fnmisDeadline
-        ? Math.max(
-            0,
-            Math.round(
-              (b.fnmisDeadline.getTime() - now.getTime()) / 3600000
-            )
-          )
-        : null,
-    }));
-
-    return NextResponse.json({
-      success: true,
-      data: enriched,
-    });
-  } catch (error) {
-    console.error("[FNMIS_GET]", error);
-
-    return NextResponse.json(
-      { success: false, error: "Failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: "Failed to submit report" }, { status: 500 });
   }
 }

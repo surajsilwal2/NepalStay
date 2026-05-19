@@ -25,6 +25,8 @@ import {
   TrendingUp,
   Map,
   Sparkles,
+  Store,
+  MessageSquareWarning,
 } from "lucide-react";
 import { useCalendar } from "@/components/providers/CalendarContext";
 
@@ -53,6 +55,7 @@ const NAV_LINKS = {
   ADMIN: [
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/hotels", label: "Hotels", icon: Building2 },
+    { href: "/admin/vendors", label: "Vendors", icon: Store },
     { href: "/admin/bookings", label: "Bookings", icon: CalendarCheck },
     { href: "/admin/users", label: "Users", icon: Users },
     { href: "/admin/reviews", label: "Reviews", icon: Star },

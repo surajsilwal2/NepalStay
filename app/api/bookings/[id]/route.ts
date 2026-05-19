@@ -48,6 +48,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     });
     if (!booking) return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
 
+    // Admin cannot manage booking status — this is handled by hotel staff/vendors only
+    if (user.role === "ADMIN") {
+      return NextResponse.json({ success: false, error: "Admins cannot manage booking status. Contact the hotel directly." }, { status: 403 });
+    }
+
     // Vendor: can only update bookings that belong to their hotel
     if (user.role === "VENDOR") {
       if (booking.hotel.vendorId !== user.id) {
