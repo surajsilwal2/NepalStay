@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
     const hotel = await prisma.hotel.findUnique({
       where: { vendorId: (session.user as any).id },
-      select: { id: true, status: true },
+      select: { id: true, status: true, staffEnabled: true, hotelSize: true },
     });
     if (!hotel) return NextResponse.json({ success: true, data: null });
 
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     const [
       totalBookings, pendingBookings, activeGuests,
       revenueThisMonth, revenueLastMonth,
-      totalReviews, refundsThisMonth, rooms,
+      totalReviews, refundsThisMonth, rooms, fnmisPending,
     ] = await Promise.all([
       prisma.booking.count({ where: { hotelId: hotel.id } }),
       prisma.booking.count({ where: { hotelId: hotel.id, status: "PENDING" } }),
@@ -51,6 +51,14 @@ export async function GET(req: NextRequest) {
         where: { hotelId: hotel.id, isActive: true },
         select: { status: true },
       }),
+      prisma.booking.count({
+        where: {
+          hotelId: hotel.id,
+          fnmisReported: false,
+          status: { in: ["CONFIRMED", "CHECKED_IN", "CHECKED_OUT"] },
+          user: { passportNumber: { not: null } },
+        },
+      }),
     ]);
 
     const thisMonthRev = revenueThisMonth._sum.totalPrice ?? 0;
@@ -66,7 +74,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        hotelStatus: hotel.status,
+        hotelStatus:   hotel.status,
+        staffEnabled:  hotel.staffEnabled,
+        hotelSize:     hotel.hotelSize,
         totalBookings, pendingBookings, activeGuests,
         revenueThisMonth: thisMonthRev,
         refundsThisMonth: refundsAmt,
@@ -74,6 +84,7 @@ export async function GET(req: NextRequest) {
         revenueLastMonth: lastMonthRev,
         revenueGrowth: Math.round(revenueGrowth * 10) / 10,
         totalReviews,
+        fnmisPending,
         rooms: { total: rooms.length, ...roomCounts },
       },
     });

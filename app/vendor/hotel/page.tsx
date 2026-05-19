@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -38,7 +39,32 @@ const STATUS_INFO: Record<string, { icon: any; cls: string; text: string }> = {
   SUSPENDED: { icon: AlertCircle,   cls: "bg-orange-50 border-orange-200 text-orange-700",text: "Your listing is suspended. Contact admin for details." },
 };
 
+function PageSkeleton() {
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <Navbar />
+      <main className="max-w-3xl mx-auto px-4 py-8">
+        <div className="h-9 w-56 bg-slate-200 rounded-xl animate-pulse mb-6" />
+        <div className="space-y-6">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4 animate-pulse">
+              <div className="h-5 w-40 bg-slate-200 rounded" />
+              <div className="h-10 bg-slate-100 rounded-xl" />
+              <div className="h-24 bg-slate-100 rounded-xl" />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="h-10 bg-slate-100 rounded-xl" />
+                <div className="h-10 bg-slate-100 rounded-xl" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+
 export default function VendorHotelPage() {
+  const router = useRouter();
   const { success: toastSuccess, error: toastError } = useToast();
   const [hotel, setHotel]         = useState<any>(null);
   const [loading, setLoading]     = useState(true);
@@ -70,6 +96,9 @@ export default function VendorHotelPage() {
     }).finally(() => setLoading(false));
   }, [reset]);
 
+  // Show skeleton until we know whether a hotel exists (prevents flicker between "Create" / "Edit")
+  if (loading) return <PageSkeleton />;
+
   const toggleAmenity = (a: string) => {
     setAmenities(p => p.includes(a) ? p.filter(x => x !== a) : [...p, a]);
   };
@@ -91,20 +120,13 @@ export default function VendorHotelPage() {
     const json   = await res.json();
     setSaving(false);
     if (!json.success) { toastError(json.error); return; }
-    toastSuccess(hotel ? "Hotel updated successfully" : "Hotel submitted for approval!");
     if (!hotel) {
-      setHotel(json.data);
-      // Update form with new hotel data for smooth transition
-      reset({
-        name: json.data.name, description: json.data.description, city: json.data.city, address: json.data.address,
-        latitude: json.data.latitude ?? undefined, longitude: json.data.longitude ?? undefined,
-        starRating: json.data.starRating, propertyType: json.data.propertyType,
-        contactPhone: json.data.contactPhone ?? "", contactEmail: json.data.contactEmail ?? "",
-        website: json.data.website ?? "",
-        checkIn: json.data.policies?.checkIn ?? "14:00",
-        checkOut: json.data.policies?.checkOut ?? "11:00",
-        cancellation: json.data.policies?.cancellation ?? "",
-      });
+      // New hotel created — redirect to dashboard to see PENDING status
+      // and navigate from there to add rooms once approved.
+      toastSuccess("Hotel submitted for approval! You'll be notified when it's approved.");
+      router.push("/vendor");
+    } else {
+      toastSuccess("Hotel updated successfully");
     }
   };
 

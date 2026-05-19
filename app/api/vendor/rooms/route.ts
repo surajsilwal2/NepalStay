@@ -7,6 +7,7 @@ import { z } from "zod";
 export const dynamic = "force-dynamic";
 
 const roomSchema = z.object({
+  roomNumber:    z.string().min(1),
   name:          z.string().min(2),
   type:          z.enum(["SINGLE","DOUBLE","TWIN","DELUXE","SUITE","PENTHOUSE","DORMITORY"]),
   pricePerNight: z.number().positive(),
@@ -61,7 +62,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: parsed.error.errors[0].message }, { status: 400 });
     }
     const room = await prisma.room.create({ data: { ...parsed.data, hotelId: hotel.id } });
-    return NextResponse.json({ success: true, data: room }, { status: 201 });
+
+    // Auto-update hotelSize and staffEnabled based on total room count
+    const totalRooms = await prisma.room.count({ where: { hotelId: hotel.id, isActive: true } });
+    const newSize    = totalRooms >= 20 ? "LARGE" : totalRooms >= 12 ? "MEDIUM" : "SMALL";
+    const newStaffEnabled = totalRooms >= 12;
+
+    if (hotel.hotelSize !== newSize || hotel.staffEnabled !== newStaffEnabled) {
+      await prisma.hotel.update({
+        where: { id: hotel.id },
+        data:  { hotelSize: newSize, staffEnabled: newStaffEnabled },
+      });
+    }
+
+    return NextResponse.json({ success: true, data: room, meta: { totalRooms, hotelSize: newSize, staffEnabled: newStaffEnabled } }, { status: 201 });
   } catch (error) {
     console.error("[VENDOR_ROOMS_POST]", error);
     return NextResponse.json({ success: false, error: "Failed to create room" }, { status: 500 });

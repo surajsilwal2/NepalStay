@@ -41,7 +41,7 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
 
   // Session-derived defaults
   const userNationality =
-    (session?.user as any)?.nationality || "Nepali";
+    (session?.user as any)?.nationality || "NEPALI";
 
   const userPassport =
     (session?.user as any)?.passportNumber || "";
@@ -72,7 +72,7 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
     if (!session?.user) return;
 
     const sessionNationality =
-      (session.user as any)?.nationality || "Nepali";
+      (session.user as any)?.nationality || "NEPALI";
 
     const sessionPassport =
       (session.user as any)?.passportNumber || "";
@@ -81,7 +81,7 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
       (session.user as any)?.purposeOfVisit || "Tourism";
 
     setNationality((prev: string) => {
-      if (!prev || prev === "Nepali") {
+      if (!prev || prev === "NEPALI") {
         return sessionNationality;
       }
       return prev;
@@ -118,7 +118,7 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
   const totalPrice =
     nights > 0 ? nights * room.pricePerNight : 0;
 
-  const isForeigner = nationality !== "Nepali";
+  const isForeigner = nationality === "FOREIGN";
 
   const toInputVal = (d: Date | null) =>
     d ? format(d, "yyyy-MM-dd") : "";
@@ -205,7 +205,7 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
                   Pay now to confirm instantly:
                 </p>
                 {/* Nepali guests → Khalti */}
-                {nationality === "Nepali" && (
+                {nationality === "NEPALI" && (
                   <KhaltiButton
                     bookingId={bookingId}
                     amount={totalPrice}
@@ -214,7 +214,7 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
                 )}
 
                 {/* Foreign guests → Stripe card payment */}
-                {nationality !== "Nepali" && (
+                {nationality === "FOREIGN" && (
                   <StripeButton bookingId={bookingId} amount={totalPrice} />
                 )}
 
@@ -355,17 +355,18 @@ export default function BookingModal({ room, hotel, onClose, onSuccess }: Props)
                 </div>
               </div>
 
-              {/* Nationality */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-                  <Globe className="w-3 h-3 inline mr-1" />
-                  Nationality (From your profile)
-                </label>
-                <div className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 text-slate-700 font-medium flex items-center">
-                  {userNationality === "FOREIGN" ? "Foreign Tourist" : "Nepali"}
-                  <span className="text-xs text-slate-500 ml-auto">(Read-only)</span>
+              {/* Nationality - Only show for foreign guests */}
+              {isForeigner && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                    <Globe className="w-3 h-3 inline mr-1" />
+                    Nationality
+                  </label>
+                  <div className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 text-slate-700 font-medium">
+                    Foreign Tourist
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* FNMIS */}
               {isForeigner && (

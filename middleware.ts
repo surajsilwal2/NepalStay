@@ -32,9 +32,15 @@ export default withAuth(
       return NextResponse.redirect(new URL("/unauthorized", req.url));
     }
 
-    // Staff + Admin
-    if (pathname.startsWith("/staff") && !["STAFF", "ADMIN"].includes(role)) {
-      return NextResponse.redirect(new URL("/unauthorized", req.url));
+    // Staff + Admin — staff must be assigned to a hotel with staffEnabled=true
+    if (pathname.startsWith("/staff")) {
+      if (!["STAFF", "ADMIN"].includes(role)) {
+        return NextResponse.redirect(new URL("/unauthorized", req.url));
+      }
+      // Extra guard: STAFF must have their hotel's staffEnabled flag set to true
+      if (role === "STAFF" && !(token as any).staffHotelEnabled) {
+        return NextResponse.redirect(new URL("/unauthorized", req.url));
+      }
     }
 
     const response = NextResponse.next();

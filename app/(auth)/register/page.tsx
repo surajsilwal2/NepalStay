@@ -14,20 +14,25 @@ const schema = z.object({
   password:        z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string(),
   role:            z.enum(["CUSTOMER", "VENDOR"]),
-  nationality:     z.enum(["NEPALI", "FOREIGN"]),
+  nationality:     z.enum(["NEPALI", "FOREIGN"]).optional(),
   passportNumber:  z.string().optional(),
   purposeOfVisit:  z.string().optional(),
 }).refine((d) => d.password === d.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
 }).refine((d) => {
+  // Only CUSTOMER (traveller) can be FOREIGN
+  if (d.role === "VENDOR" && d.nationality === "FOREIGN") {
+    return false;
+  }
+  // If FOREIGN, both passport and purpose are required
   if (d.nationality === "FOREIGN") {
-    return d.passportNumber && d.passportNumber.length >= 6;
+    return d.passportNumber && d.passportNumber.length >= 6 && d.purposeOfVisit;
   }
   return true;
 }, {
-  message: "Passport number required for foreign nationals",
-  path: ["passportNumber"],
+  message: "Hotel owners must be Nepali citizens. Only travellers can be foreign guests.",
+  path: ["nationality"],
 });
 type Form = z.infer<typeof schema>;
 
@@ -130,49 +135,59 @@ export default function RegisterPage() {
                   </div>
                 ))}
 
-                {/* Nationality Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-3">Your Nationality</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {(["NEPALI", "FOREIGN"] as const).map((nat) => (
-                      <label key={nat}
-                        className={`relative flex flex-col items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-                          selectedNationality === nat
-                            ? "border-amber-500 bg-amber-50"
-                            : "border-slate-200 hover:border-amber-300"
-                        }`}>
-                        <input {...register("nationality")} type="radio" value={nat} className="sr-only" />
-                        <span className="text-lg mb-1">{nat === "NEPALI" ? "🇳🇵" : "🌍"}</span>
-                        <span className="text-xs font-semibold text-slate-700">{nat === "NEPALI" ? "Nepali Citizen" : "Foreign Tourist"}</span>
-                      </label>
-                    ))}
-                  </div>
-                  {errors.nationality && <p className="mt-2 text-xs text-red-600">{errors.nationality.message}</p>}
-                </div>
+                {/* Nationality Selection - Only for CUSTOMER (Travellers) */}
+                {selectedRole === "CUSTOMER" && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-3">Your Nationality</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        {(["NEPALI", "FOREIGN"] as const).map((nat) => (
+                          <label key={nat}
+                            className={`relative flex flex-col items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                              selectedNationality === nat
+                                ? "border-amber-500 bg-amber-50"
+                                : "border-slate-200 hover:border-amber-300"
+                            }`}>
+                            <input {...register("nationality")} type="radio" value={nat} className="sr-only" />
+                            <span className="text-lg mb-1">{nat === "NEPALI" ? "🇳🇵" : "🌍"}</span>
+                            <span className="text-xs font-semibold text-slate-700">{nat === "NEPALI" ? "Nepali Citizen" : "Foreign Tourist"}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {errors.nationality && <p className="mt-2 text-xs text-red-600">{errors.nationality.message}</p>}
+                    </div>
 
-                {/* Passport Number for Foreign */}
-                {selectedNationality === "FOREIGN" && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Passport Number *</label>
-                    <input {...register("passportNumber")} type="text" placeholder="e.g., AB123456" className={inputCls} />
-                    {errors.passportNumber && <p className="mt-1 text-xs text-red-600">{errors.passportNumber.message}</p>}
-                  </div>
+                    {/* Passport Number for Foreign Travellers */}
+                    {selectedNationality === "FOREIGN" && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Passport Number *</label>
+                        <input {...register("passportNumber")} type="text" placeholder="e.g., AB123456" className={inputCls} />
+                        {errors.passportNumber && <p className="mt-1 text-xs text-red-600">{errors.passportNumber.message}</p>}
+                      </div>
+                    )}
+
+                    {/* Purpose of Visit for Foreign Travellers */}
+                    {selectedNationality === "FOREIGN" && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Purpose of Visit *</label>
+                        <select {...register("purposeOfVisit")} className={inputCls}>
+                          <option value="">Select purpose...</option>
+                          <option value="LEISURE">Leisure/Tourism</option>
+                          <option value="BUSINESS">Business</option>
+                          <option value="EDUCATION">Education</option>
+                          <option value="MEDICAL">Medical Treatment</option>
+                          <option value="TRANSIT">Transit</option>
+                          <option value="OTHER">Other</option>
+                        </select>
+                        {errors.purposeOfVisit && <p className="mt-1 text-xs text-red-600">{errors.purposeOfVisit.message}</p>}
+                      </div>
+                    )}
+                  </>
                 )}
 
-                {/* Purpose of Visit for Foreign */}
-                {selectedNationality === "FOREIGN" && (
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Purpose of Visit</label>
-                    <select {...register("purposeOfVisit")} className={inputCls}>
-                      <option value="">Select purpose...</option>
-                      <option value="LEISURE">Leisure/Tourism</option>
-                      <option value="BUSINESS">Business</option>
-                      <option value="EDUCATION">Education</option>
-                      <option value="MEDICAL">Medical Treatment</option>
-                      <option value="TRANSIT">Transit</option>
-                      <option value="OTHER">Other</option>
-                    </select>
-                  </div>
+                {/* For Hotel Owners - Default to NEPALI */}
+                {selectedRole === "VENDOR" && (
+                  <input {...register("nationality")} type="hidden" value="NEPALI" />
                 )}
 
                 <div>
