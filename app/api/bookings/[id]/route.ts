@@ -126,13 +126,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const updateData: any = { status };
 
-    // When checking out, free the room
+    // When checking out, room goes to CLEANING status for housekeeping
     if (status === "CHECKED_OUT") {
-      await prisma.room.update({ where: { id: booking.roomId }, data: { status: "CLEANING" } });
+      await prisma.room.update({ 
+        where: { id: booking.roomId }, 
+        data: { status: "CLEANING", updatedAt: new Date() }
+      });
     }
-    // When confirming, mark room as occupied if checking in today
+    // When checking in, mark room as occupied
     if (status === "CHECKED_IN") {
-      await prisma.room.update({ where: { id: booking.roomId }, data: { status: "OCCUPIED" } });
+      await prisma.room.update({ 
+        where: { id: booking.roomId }, 
+        data: { status: "OCCUPIED", updatedAt: new Date() }
+      });
     }
 
     const updated = await prisma.booking.update({ where: { id: params.id }, data: updateData });

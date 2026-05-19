@@ -1,0 +1,2 @@
+Reviews management API endpoint has been disabled.
+See /app/admin/reviews/page.tsx for details.

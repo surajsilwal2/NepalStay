@@ -8,15 +8,25 @@ export const dynamic = "force-dynamic";
 export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !["ADMIN", "STAFF"].includes((session.user as any).role)) {
+    const actor = session?.user as any;
+    if (!session || !["ADMIN", "STAFF", "VENDOR"].includes(actor?.role)) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
     }
 
     const { bookingId, notes } = await req.json();
     if (!bookingId) return NextResponse.json({ success: false, error: "bookingId required" }, { status: 400 });
 
-    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { hotel: { select: { vendorId: true } } },
+    });
     if (!booking) return NextResponse.json({ success: false, error: "Booking not found" }, { status: 404 });
+
+    // Vendor can only mark refunds for their own hotel
+    if (actor.role === "VENDOR" && booking.hotel.vendorId !== actor.id) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
+
     if (booking.refundStatus !== "PENDING") {
       return NextResponse.json(
         { success: false, error: `Cannot complete — current refund status is ${booking.refundStatus}` },

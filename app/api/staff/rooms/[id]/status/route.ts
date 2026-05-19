@@ -71,10 +71,10 @@ export async function PATCH(
         }
       }
 
-      // Update + log atomically
+      // Update + log atomically — always set updatedAt to trigger real-time sync
       const roomUpdate = await tx.room.update({
         where: { id: params.id },
-        data: { status: parsed.data.status },
+        data: { status: parsed.data.status, updatedAt: new Date() },
       });
 
       await tx.roomStatusLog.create({

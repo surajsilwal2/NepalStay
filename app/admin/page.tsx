@@ -2,9 +2,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  Building2, Users, CalendarCheck, TrendingUp, TrendingDown,
+  Building2, CalendarCheck, TrendingUp, TrendingDown,
   AlertTriangle, Globe, FileText, ArrowRight,
-  Star, Store, MessageSquareWarning,
+  Store, MessageSquareWarning,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useToast } from "@/components/providers/ToastContext";
@@ -124,7 +124,7 @@ export default function AdminDashboard() {
             { label: "Total Hotels", value: stats.totalHotels,
               sub: `${stats.approvedHotels} approved`, icon: Building2, cls: "text-purple-600 bg-purple-50" },
             { label: "Registered Users", value: stats.totalUsers,
-              icon: Users, cls: "text-amber-600 bg-amber-50" },
+              icon: Store, cls: "text-amber-600 bg-amber-50" },
           ].map(({ label, value, sub, trend, icon: Icon, cls }) => (
             <div key={label} className="bg-white rounded-2xl border border-slate-100 p-5">
               <div className="flex items-start justify-between mb-3">
@@ -165,14 +165,11 @@ export default function AdminDashboard() {
           <h2 className="font-bold text-slate-800 mb-4">Quick Access</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {[
-              { href: "/admin/hotels",   icon: Building2,    label: "Hotel Approvals",   sub: `${stats.pendingHotels} pending` },
-              { href: "/admin/vendors",  icon: Store,        label: "Vendor Management",  sub: "All hotel owners" },
-              { href: "/admin/bookings", icon: CalendarCheck,label: "All Bookings",       sub: `${stats.totalBookings} total` },
-              { href: "/admin/users",    icon: Users,        label: "User Management",    sub: `${stats.totalUsers} accounts` },
-              { href: "/admin/fnmis",    icon: Globe,        label: "FNMIS Reports",      sub: `${stats.fnmisPending} overdue` },
-              { href: "/admin/complaints",icon: MessageSquareWarning, label: "Complaints", sub: `${stats.pendingComplaints ?? 0} open` },
-              { href: "/admin/reviews",  icon: Star,         label: "Review Moderation",  sub: "Manage guest reviews" },
-              { href: "/admin/audit",    icon: FileText,     label: "Audit Report",       sub: "IRD-compliant export" },
+              { href: "/admin/hotels",    icon: Building2,             label: "Hotel Approvals",  sub: `${stats.pendingHotels} pending` },
+              { href: "/admin/bookings",  icon: CalendarCheck,         label: "All Bookings",      sub: `${stats.totalBookings} total` },
+              { href: "/admin/complaints",icon: MessageSquareWarning,  label: "Complaints",        sub: `${stats.pendingComplaints ?? 0} open` },
+              { href: "/admin/fnmis",     icon: Globe,                 label: "FNMIS Reports",     sub: `${stats.fnmisPending} overdue` },
+              { href: "/admin/audit",     icon: FileText,              label: "Audit Report",      sub: "IRD-compliant export" },
             ].map(({ href, icon: Icon, label, sub }) => (
               <Link key={href} href={href}
                 className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors group">

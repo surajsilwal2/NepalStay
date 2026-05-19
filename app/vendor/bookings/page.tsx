@@ -231,6 +231,27 @@ export default function VendorBookingsPage() {
     }
   };
 
+  const markRefundDone = async (bookingId: string) => {
+    setWorking(bookingId);
+    try {
+      const res  = await fetch("/api/admin/refunds", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, notes: "Refund manually completed by hotel" }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toastSuccess("Refund marked as completed");
+        fetchBookings();
+      } else {
+        toastError(data.error ?? "Failed to mark refund");
+      }
+    } catch {
+      toastError("Network error");
+    } finally {
+      setWorking(null);
+    }
+  };
+
   const counts = {
     ALL:         bookings.length,
     PENDING:     bookings.filter(b => b.status === "PENDING").length,
@@ -239,10 +260,16 @@ export default function VendorBookingsPage() {
     CHECKED_OUT: bookings.filter(b => b.status === "CHECKED_OUT").length,
   };
 
-  const canRefund = (b: Booking) =>
+  // Show "Cancel & Refund" only on active paid bookings (vendor-initiated cancellation)
+  const canCancelRefund = (b: Booking) =>
     b.paidAt &&
     ["PENDING","CONFIRMED"].includes(b.status) &&
     b.refundStatus === "NONE";
+
+  // Show "Mark Refund Done" on cancelled bookings where manual refund is still pending
+  const canMarkRefundDone = (b: Booking) =>
+    b.status === "CANCELLED" &&
+    b.refundStatus === "PENDING";
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -357,10 +384,22 @@ export default function VendorBookingsPage() {
                               No Show
                             </button>
                           )}
-                          {canRefund(b) && (
+                          {["PENDING","CONFIRMED"].includes(b.status) && (
+                            <button onClick={() => updateStatus(b.id, "CANCELLED")} disabled={working === b.id}
+                              className="text-xs px-2.5 py-1.5 bg-slate-100 text-slate-600 border border-slate-200 rounded-lg hover:bg-red-50 hover:text-red-700 hover:border-red-200 font-medium disabled:opacity-50 whitespace-nowrap">
+                              Cancel
+                            </button>
+                          )}
+                          {canCancelRefund(b) && (
                             <button onClick={() => setRefundBooking(b)} disabled={working === b.id}
                               className="text-xs px-2.5 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 font-medium disabled:opacity-50 whitespace-nowrap flex items-center gap-1">
-                              <RotateCcw className="w-3 h-3" />Refund
+                              <RotateCcw className="w-3 h-3" />Cancel &amp; Refund
+                            </button>
+                          )}
+                          {canMarkRefundDone(b) && (
+                            <button onClick={() => markRefundDone(b.id)} disabled={working === b.id}
+                              className="text-xs px-2.5 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 font-medium disabled:opacity-50 whitespace-nowrap flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3" />Refund Done
                             </button>
                           )}
                         </div>

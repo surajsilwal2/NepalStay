@@ -77,6 +77,7 @@ export async function POST(req: NextRequest) {
     console.log("[KHALTI_VERIFY] lookup response:", JSON.stringify(vData));
 
     if (vData.status !== "Completed") {
+      console.warn("[KHALTI_VERIFY] Payment not completed - Status:", vData.status);
       return NextResponse.json(
         {
           success: false,
@@ -87,8 +88,9 @@ export async function POST(req: NextRequest) {
     }
 
     const paidNPR = vData.total_amount / 100;
-    console.log("[KHALTI_VERIFY] paidNPR:", paidNPR, "booking.totalPrice:", booking.totalPrice);
+    console.log("[KHALTI_VERIFY] Verified - paidNPR:", paidNPR, "booking.totalPrice:", booking.totalPrice);
     if (Math.abs(paidNPR - booking.totalPrice) > 1) {
+      console.warn("[KHALTI_VERIFY] Amount mismatch - paid:", paidNPR, "expected:", booking.totalPrice);
       return NextResponse.json(
         { success: false, error: `Amount mismatch — paid NPR ${paidNPR} vs expected NPR ${booking.totalPrice}` },
         { status: 400 },
