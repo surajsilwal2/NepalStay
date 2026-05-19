@@ -67,6 +67,7 @@ export async function GET(req: NextRequest) {
       },
       include: {
         room: { select: { name: true, type: true } },
+        user: { select: { nationality: true } },
       },
     });
 
@@ -172,14 +173,14 @@ export async function GET(req: NextRequest) {
 
     // ── 5. Guest Nationality (Nepali vs Foreign) ──────────────────────────
     const nepaliCount = bookings.filter(
-      (b) => !b.guestNationality || b.guestNationality === "Nepali",
+      (b) => !b.user?.nationality || b.user.nationality === "NEPALI",
     ).length;
     const foreignCount = bookings.length - nepaliCount;
 
     // Breakdown of top nationalities
     const nationalityMap = new Map<string, number>();
     bookings.forEach((b) => {
-      const nat = b.guestNationality || "Nepali";
+      const nat = b.user?.nationality || "NEPALI";
       nationalityMap.set(nat, (nationalityMap.get(nat) || 0) + 1);
     });
     const guestNationality = Array.from(nationalityMap.entries())

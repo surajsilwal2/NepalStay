@@ -138,6 +138,21 @@ export default function ProfilePage() {
               </p>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Nationality
+              </label>
+              <input
+                type="text"
+                value={user?.nationality === "FOREIGN" ? "Foreign Tourist" : "Nepali Citizen"}
+                disabled
+                className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm bg-slate-50 text-slate-600"
+              />
+              <p className="mt-1 text-xs text-slate-400">
+                Nationality is set during registration
+              </p>
+            </div>
+
             <button
               type="submit"
               disabled={isSubmitting}
