@@ -56,11 +56,11 @@ function RefundModal({ booking, onClose, onConfirm, loading }: {
   const policy = daysToCheckIn > 7 ? "Full refund (>7 days)" : daysToCheckIn >= 3 ? "50% refund (3–7 days)" : "No refund (<3 days)";
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={!loading ? onClose : undefined}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
           <h2 className="text-lg font-semibold text-slate-800">Process Refund</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} disabled={loading} className={`${loading ? "opacity-50 cursor-not-allowed" : "text-slate-400 hover:text-slate-600"}`}><X className="w-5 h-5" /></button>
         </div>
         <div className="p-6 space-y-4">
           <div className="bg-slate-50 rounded-xl p-4 space-y-2 text-sm">
@@ -101,16 +101,17 @@ function RefundModal({ booking, onClose, onConfirm, loading }: {
             <input
               value={reason}
               onChange={e => setReason(e.target.value)}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              disabled={loading}
+              className={`w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
             />
           </div>
           <div className="flex gap-3 pt-2">
-            <button onClick={onClose}
-              className="flex-1 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50 transition-colors">
+            <button onClick={onClose} disabled={loading}
+              className={`flex-1 py-2.5 border border-slate-200 rounded-xl text-sm transition-colors ${loading ? "opacity-50 cursor-not-allowed text-slate-400" : "text-slate-600 hover:bg-slate-50"}`}>
               Cancel
             </button>
             <button onClick={() => onConfirm(reason)} disabled={loading}
-              className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+              className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               Confirm Refund
             </button>

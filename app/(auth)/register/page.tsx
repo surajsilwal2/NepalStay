@@ -21,6 +21,10 @@ const schema = z.object({
   message: "Passwords do not match",
   path: ["confirmPassword"],
 }).refine((d) => {
+  // For CUSTOMER: nationality is required
+  if (d.role === "CUSTOMER" && !d.nationality) {
+    return false;
+  }
   // Only CUSTOMER (traveller) can be FOREIGN
   if (d.role === "VENDOR" && d.nationality === "FOREIGN") {
     return false;
@@ -31,7 +35,7 @@ const schema = z.object({
   }
   return true;
 }, {
-  message: "Hotel owners must be Nepali citizens. Only travellers can be foreign guests.",
+  message: "Customers must specify their nationality. Hotel owners must be Nepali citizens.",
   path: ["nationality"],
 });
 type Form = z.infer<typeof schema>;

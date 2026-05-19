@@ -69,6 +69,23 @@ export const authOptions: NextAuthOptions = {
         token.staffHotelId      = (user as any).staffHotelId;
         token.staffHotelEnabled = (user as any).staffHotelEnabled;
       }
+      
+      // Refresh staffHotelEnabled on every invocation for STAFF users
+      if (token.role === "STAFF" && token.id) {
+        const staffUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { staffHotelId: true, staffHotel: { select: { staffEnabled: true } }, isActive: true },
+        });
+        if (staffUser) {
+          token.staffHotelId = staffUser.staffHotelId;
+          token.staffHotelEnabled = staffUser.staffHotel?.staffEnabled ?? false;
+          // Also check if staff account itself is disabled
+          if (!staffUser.isActive) {
+            token.staffHotelEnabled = false;
+          }
+        }
+      }
+      
       // Handle update() calls from the client (e.g profile save)
       if (trigger === "update" && session) {
         if (session.name  !== undefined) token.name   = session.name;

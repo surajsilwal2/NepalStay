@@ -59,9 +59,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (user.role === "STAFF") {
       const staffUser = await prisma.user.findUnique({
         where: { id: user.id },
-        select: { staffHotelId: true },
+        select: { staffHotelId: true, isActive: true },
       });
       if (!staffUser?.staffHotelId || staffUser.staffHotelId !== booking.hotelId) {
+        return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+      }
+      // Verify staff account is enabled
+      if (!staffUser.isActive) {
+        return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+      }
+      // Verify hotel is enabled
+      const hotel = await prisma.hotel.findUnique({
+        where: { id: booking.hotelId },
+        select: { status: true },
+      });
+      if (!hotel || hotel.status !== "APPROVED") {
         return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
       }
     }

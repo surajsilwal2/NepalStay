@@ -47,8 +47,16 @@ export default function ProfilePage() {
           });
         }
       })
-      .catch(() => {/* silent — form already has empty defaults */});
-  }, [reset]);
+      .catch((err) => {
+        // Fallback: reset with defaults from session and show error
+        reset({
+          name:    session?.user?.name ?? "",
+          phone:   "",
+          address: "",
+        });
+        toastError("Failed to load profile. Please refresh.");
+      });
+  }, [reset, session?.user?.name, toastError]);
 
   useEffect(() => {
     if (session) fetchProfile();
