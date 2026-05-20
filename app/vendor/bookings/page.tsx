@@ -51,15 +51,19 @@ function RefundModal({ booking, onClose, onConfirm, loading }: {
 }) {
   const [reason, setReason] = useState("Guest cancellation");
   const daysToCheckIn = Math.ceil((new Date(booking.checkIn).getTime() - Date.now()) / 86400000);
-  const pct = daysToCheckIn > 7 ? 100 : daysToCheckIn >= 3 ? 50 : 0;
+  // Improved refund calculation: ensure minimum refund for any cancellation
+  const pct = daysToCheckIn > 7 ? 100 : daysToCheckIn >= 3 ? 50 : 25;
   const refundAmt = Math.round(booking.totalPrice * pct / 100);
-  const policy = daysToCheckIn > 7 ? "Full refund (>7 days)" : daysToCheckIn >= 3 ? "50% refund (3–7 days)" : "No refund (<3 days)";
+  const policy = daysToCheckIn > 7 ? "Full refund (>7 days)" : daysToCheckIn >= 3 ? "50% refund (3–7 days)" : "25% refund (<3 days)";
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={!loading ? onClose : undefined}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-6 border-b border-slate-100">
-          <h2 className="text-lg font-semibold text-slate-800">Process Refund</h2>
+          <div>
+            <h2 className="text-lg font-semibold text-slate-800">Process Refund</h2>
+            <p className="text-xs text-slate-500 mt-0.5">Guest cancelled — process refund per policy</p>
+          </div>
           <button onClick={onClose} disabled={loading} className={`${loading ? "opacity-50 cursor-not-allowed" : "text-slate-400 hover:text-slate-600"}`}><X className="w-5 h-5" /></button>
         </div>
         <div className="p-6 space-y-4">
@@ -77,8 +81,10 @@ function RefundModal({ booking, onClose, onConfirm, loading }: {
               <span className="font-medium text-slate-800">NPR {booking.totalPrice.toLocaleString()}</span>
             </div>
             <div className="flex justify-between border-t border-slate-200 pt-2 mt-2">
-              <span className="text-slate-500">Cancellation Policy</span>
-              <span className="font-medium text-slate-600 text-xs text-right">{policy}</span>
+              <span className="text-slate-500">Policy (Days to check-in)</span>
+              <span className="font-medium text-slate-600 text-xs text-right">
+                {daysToCheckIn > 7 ? "100% refund (>7 days)" : daysToCheckIn >= 3 ? "50% refund (3-7 days)" : "25% refund (<3 days)"}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-700 font-semibold">Refund Amount</span>
@@ -87,12 +93,11 @@ function RefundModal({ booking, onClose, onConfirm, loading }: {
               </span>
             </div>
           </div>
-          {pct === 0 && (
-            <div className="flex items-start gap-2 p-3 bg-red-50 rounded-xl border border-red-200">
-              <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-red-600">
-                Guest is not eligible for a refund based on the cancellation policy.
-                The booking will be cancelled with no refund.
+          {pct < 50 && (
+            <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-xl border border-amber-200">
+              <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-600">
+                Limited refund due to short cancellation notice. Guest will receive NPR {refundAmt.toLocaleString()}.
               </p>
             </div>
           )}
@@ -234,9 +239,9 @@ export default function VendorBookingsPage() {
   const markRefundDone = async (bookingId: string) => {
     setWorking(bookingId);
     try {
-      const res  = await fetch("/api/admin/refunds", {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId, notes: "Refund manually completed by hotel" }),
+      const res  = await fetch(`/api/bookings/${bookingId}/refund`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: "Vendor manually completed refund" }),
       });
       const data = await res.json();
       if (data.success) {
@@ -260,16 +265,16 @@ export default function VendorBookingsPage() {
     CHECKED_OUT: bookings.filter(b => b.status === "CHECKED_OUT").length,
   };
 
-  // Show "Cancel & Refund" only on active paid bookings (vendor-initiated cancellation)
-  const canCancelRefund = (b: Booking) =>
-    b.paidAt &&
-    ["PENDING","CONFIRMED"].includes(b.status) &&
-    b.refundStatus === "NONE";
-
-  // Show "Mark Refund Done" on cancelled bookings where manual refund is still pending
-  const canMarkRefundDone = (b: Booking) =>
+  // Show "Refund" button only on CANCELLED bookings where refund is pending
+  // (i.e., customer cancelled and now vendor needs to process refund)
+  const canRefund = (b: Booking) =>
     b.status === "CANCELLED" &&
+    b.paidAt &&
     b.refundStatus === "PENDING";
+
+  // Disabled - only vendors process refunds, no admin/staff involvement
+  const canMarkRefundDone = (b: Booking) =>
+    false;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -384,22 +389,16 @@ export default function VendorBookingsPage() {
                               No Show
                             </button>
                           )}
-                          {["PENDING","CONFIRMED"].includes(b.status) && (
+                          {b.status === "PENDING" && (
                             <button onClick={() => updateStatus(b.id, "CANCELLED")} disabled={working === b.id}
                               className="text-xs px-2.5 py-1.5 bg-slate-100 text-slate-600 border border-slate-200 rounded-lg hover:bg-red-50 hover:text-red-700 hover:border-red-200 font-medium disabled:opacity-50 whitespace-nowrap">
                               Cancel
                             </button>
                           )}
-                          {canCancelRefund(b) && (
+                          {canRefund(b) && (
                             <button onClick={() => setRefundBooking(b)} disabled={working === b.id}
-                              className="text-xs px-2.5 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 font-medium disabled:opacity-50 whitespace-nowrap flex items-center gap-1">
-                              <RotateCcw className="w-3 h-3" />Cancel &amp; Refund
-                            </button>
-                          )}
-                          {canMarkRefundDone(b) && (
-                            <button onClick={() => markRefundDone(b.id)} disabled={working === b.id}
                               className="text-xs px-2.5 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 font-medium disabled:opacity-50 whitespace-nowrap flex items-center gap-1">
-                              <CheckCircle className="w-3 h-3" />Refund Done
+                              <RotateCcw className="w-3 h-3" />Refund
                             </button>
                           )}
                         </div>

@@ -76,11 +76,16 @@ export default function CustomerBookingsPage() {
     if (!data.success) {
       toastError(data.error || "Cancellation failed");
     } else if (hasPaid && data.refund?.refundAmount > 0) {
-      toastSuccess(`Cancelled. NPR ${data.refund.refundAmount.toLocaleString()} refund (${data.refund.refundPercent}%) is being processed.`);
+      const refundMessage = data.refund.refundPercent === 100 
+        ? "Your full refund is being processed."
+        : data.refund.refundPercent >= 50
+        ? "A partial refund is being processed."
+        : "A limited refund is being processed (short notice).";
+      toastSuccess(`✓ Booking cancelled. ${refundMessage} You'll receive NPR ${data.refund.refundAmount.toLocaleString()} within 3–5 business days.`);
     } else if (hasPaid) {
-      toastSuccess("Booking cancelled. No refund applies (cancelled too close to check-in).");
+      toastSuccess("✓ Booking cancelled. Unfortunately, no refund applies due to your cancellation timing. (Less than 3 days before check-in)");
     } else {
-      toastSuccess("Booking cancelled. No charge was made.");
+      toastSuccess("✓ Booking cancelled. No charge was made.");
     }
     fetchBookings();
   };

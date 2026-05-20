@@ -60,8 +60,8 @@ export async function POST(req: NextRequest) {
     const stripeSession = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       customer_email: booking.user.email,
-      // Always collect billing address — Stripe uses this for correct country
-      billing_address_collection: "required",
+      // Do not collect billing address — simplifies checkout
+      billing_address_collection: "auto",
       // Pre-fill country: Nepali guests = NP, Foreign guests = empty (user will select)
       locale: isForeign ? undefined : "en",
       line_items: [

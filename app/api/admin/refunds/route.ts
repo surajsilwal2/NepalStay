@@ -5,56 +5,49 @@ import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-export async function PATCH(req: NextRequest) {
+// This endpoint is for ADMIN to view refund reports/analytics only
+// NOT for processing refunds - only vendors process refunds
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     const actor = session?.user as any;
-    if (!session || !["ADMIN", "STAFF", "VENDOR"].includes(actor?.role)) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
+    
+    // Only ADMIN can view refund reports
+    if (!session || actor?.role !== "ADMIN") {
+      return NextResponse.json({ success: false, error: "Only admins can view refund reports" }, { status: 403 });
     }
 
-    const { bookingId, notes } = await req.json();
-    if (!bookingId) return NextResponse.json({ success: false, error: "bookingId required" }, { status: 400 });
-
-    const booking = await prisma.booking.findUnique({
-      where: { id: bookingId },
-      include: { hotel: { select: { vendorId: true } } },
+    // Get refund statistics for monitoring
+    const refunds = await prisma.booking.findMany({
+      where: { status: "CANCELLED" },
+      select: {
+        id: true,
+        invoiceNumber: true,
+        totalPrice: true,
+        refundAmount: true,
+        refundPercent: true,
+        refundStatus: true,
+        refundedAt: true,
+        user: { select: { name: true, email: true } },
+        hotel: { select: { name: true } },
+      },
+      orderBy: { refundedAt: "desc" },
+      take: 100,
     });
-    if (!booking) return NextResponse.json({ success: false, error: "Booking not found" }, { status: 404 });
 
-    // Vendor can only mark refunds for their own hotel
-    if (actor.role === "VENDOR" && booking.hotel.vendorId !== actor.id) {
-      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
-    }
-
-    if (booking.refundStatus !== "PENDING") {
-      return NextResponse.json(
-        { success: false, error: `Cannot complete — current refund status is ${booking.refundStatus}` },
-        { status: 400 }
-      );
-    }
-
-    const now = new Date();
-    await prisma.$transaction([
-      prisma.booking.update({
-        where: { id: bookingId },
-        data:  { refundStatus: "COMPLETED", refundedAt: now },
-      }),
-      ...(booking.creditNoteRef
-        ? [prisma.creditNote.updateMany({
-            where: { creditNoteNumber: booking.creditNoteRef },
-            data:  { notes: notes ?? "Refund manually completed by admin" },
-          })]
-        : []),
-    ]);
+    const stats = {
+      totalCancellations: await prisma.booking.count({ where: { status: "CANCELLED" } }),
+      completedRefunds: await prisma.booking.count({ where: { status: "CANCELLED", refundStatus: "COMPLETED" } }),
+      pendingRefunds: await prisma.booking.count({ where: { status: "CANCELLED", refundStatus: "PENDING" } }),
+    };
 
     return NextResponse.json({
       success: true,
-      message: `Refund of NPR ${booking.refundAmount?.toLocaleString() ?? "?"} marked as completed.`,
-      data: { bookingId, refundStatus: "COMPLETED", refundedAt: now },
+      data: { refunds, stats },
     });
   } catch (error) {
-    console.error("[ADMIN_REFUNDS_PATCH]", error);
+    console.error("[ADMIN_REFUNDS_GET]", error);
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }
+

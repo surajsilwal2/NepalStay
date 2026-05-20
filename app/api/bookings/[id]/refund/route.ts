@@ -25,32 +25,38 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     if (!booking) return NextResponse.json({ success: false, error: "Booking not found" }, { status: 404 });
 
-    // Admin cannot process refunds — only customers, vendors, and staff can
+    // Only customers and vendors can process refunds
+    // CUSTOMERS: can refund their own bookings (initial cancellation)
+    // VENDORS: can refund bookings for their own hotel (when customer requests cancellation)
+    // NO ADMIN, NO STAFF
+    
     if (user.role === "ADMIN") {
       return NextResponse.json({ success: false, error: "Admins cannot process refunds. Contact the hotel directly." }, { status: 403 });
+    }
+
+    if (user.role === "STAFF") {
+      return NextResponse.json({ success: false, error: "Staff cannot process refunds. Hotel vendor must handle this." }, { status: 403 });
     }
 
     if (user.role === "CUSTOMER" && booking.userId !== user.id) {
       return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
     }
 
-    // Vendor: can only refund bookings for their own hotel
-    if (user.role === "VENDOR" && booking.hotel.vendorId !== user.id) {
-      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
-    }
-
-    // Staff: can only refund bookings for their assigned hotel
-    if (user.role === "STAFF") {
-      const staffUser = await prisma.user.findUnique({
-        where: { id: user.id },
-        select: { staffHotelId: true },
-      });
-      if (staffUser?.staffHotelId !== booking.hotelId) {
+    // Vendor: can only refund bookings for their own hotel, and only when customer has cancelled
+    if (user.role === "VENDOR") {
+      if (booking.hotel.vendorId !== user.id) {
         return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+      }
+      // Vendor can only process refunds on CANCELLED bookings (after customer cancels)
+      if (booking.status !== "CANCELLED") {
+        return NextResponse.json({ success: false, error: `Can only refund CANCELLED bookings. Current status: ${booking.status}` }, { status: 400 });
       }
     }
 
-    if (!["PENDING", "CONFIRMED"].includes(booking.status)) {
+    // Customer refunds happen on PENDING/CONFIRMED (initial cancellation)
+    // Vendor refunds happen on CANCELLED (processing customer's cancellation request)
+    const validStatuses = user.role === "CUSTOMER" ? ["PENDING", "CONFIRMED"] : ["CANCELLED"];
+    if (!validStatuses.includes(booking.status)) {
       return NextResponse.json({ success: false, error: `Cannot refund a booking with status ${booking.status}` }, { status: 400 });
     }
 
