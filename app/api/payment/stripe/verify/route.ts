@@ -97,17 +97,25 @@ export async function POST(req: NextRequest) {
     const invoiceNumber = generateInvoiceNumber(bookingId, booking.totalPrice);
 
     await prisma.booking.update({
-      where: { id: bookingId },
-      data: {
-        status: "CONFIRMED",
-        paymentStatus: "PAID",
-        paymentMethod: "STRIPE",
-        invoiceNumber,
-        invoiceIssuedAt: new Date(),
-        paidAt: new Date(),
-        stripeSessionId: sessionId,
-      },
-    });
+  where: { id: bookingId },
+  data: {
+    status: "CONFIRMED",
+    paymentStatus: "PAID",
+    paymentMethod: "STRIPE",
+
+    invoiceNumber,
+    invoiceIssuedAt: new Date(),
+
+    paidAt: new Date(),
+
+    stripeSessionId: sessionId,
+
+    stripePaymentIntentId:
+      typeof stripeSession.payment_intent === "string"
+        ? stripeSession.payment_intent
+        : stripeSession.payment_intent?.id,
+  },
+});
 
     // After prisma.booking.update, add:
     const { calcPointsEarned, getTierByPoints } =

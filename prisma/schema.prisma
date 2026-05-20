@@ -229,6 +229,7 @@ model Booking {
 
   checkIn   DateTime
   stripeSessionId String?
+  stripePaymentIntentId String?
   checkOut  DateTime
   nights    Int
   adults    Int           @default(1)

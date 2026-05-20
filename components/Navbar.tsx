@@ -57,7 +57,7 @@ const NAV_LINKS = {
     { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { href: "/admin/hotels", label: "Hotels", icon: Building2 },
     { href: "/admin/vendors", label: "Vendors", icon: Store },
-    { href: "/admin/bookings", label: "Bookings", icon: CalendarCheck },
+    { href: "/admin/invoices", label: "Invoices", icon: FileText },
     { href: "/admin/complaints", label: "Complaints", icon: MessageSquareWarning },
     { href: "/admin/fnmis", label: "FNMIS", icon: Globe },
     { href: "/admin/audit", label: "Audit", icon: FileText },

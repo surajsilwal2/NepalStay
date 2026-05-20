@@ -1,171 +1,557 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import Stripe from "stripe";
+
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { getCancellationPolicy, generateCreditNoteNumber } from "@/lib/booking";
+
+import {
+  generateCreditNoteNumber,
+  getCancellationPolicy,
+} from "@/lib/booking";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("STRIPE_SECRET_KEY missing");
+  }
+
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: "2026-02-25.clover",
+  });
+}
+
+export async function POST(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
-    const user    = session.user as any;
-    const { reason } = await req.json().catch(() => ({}));
+    if (!session) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized",
+        },
+        { status: 401 }
+      );
+    }
+
+    const user = session.user as any;
+
+    const { id } = await context.params;
+
+    const body = await req.json().catch(() => ({}));
+
+    const reason =
+      body.reason?.trim() || "Guest cancellation";
 
     const booking = await prisma.booking.findUnique({
-      where: { id: params.id },
+      where: {
+        id,
+      },
+
       include: {
-        user:  { select: { id: true, name: true, email: true } },
-        hotel: { select: { name: true, vendorId: true } },
-        room:  { select: { name: true, status: true } },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+
+        hotel: {
+          select: {
+            id: true,
+            name: true,
+            vendorId: true,
+          },
+        },
+
+        room: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+
+        creditNote: true,
       },
     });
 
-    if (!booking) return NextResponse.json({ success: false, error: "Booking not found" }, { status: 404 });
-
-    // Only customers and vendors can process refunds
-    // CUSTOMERS: can refund their own bookings (initial cancellation)
-    // VENDORS: can refund bookings for their own hotel (when customer requests cancellation)
-    // NO ADMIN, NO STAFF
-    
-    if (user.role === "ADMIN") {
-      return NextResponse.json({ success: false, error: "Admins cannot process refunds. Contact the hotel directly." }, { status: 403 });
+    if (!booking) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Booking not found",
+        },
+        { status: 404 }
+      );
     }
 
-    if (user.role === "STAFF") {
-      return NextResponse.json({ success: false, error: "Staff cannot process refunds. Hotel vendor must handle this." }, { status: 403 });
+    // =========================================================
+    // BLOCK ADMIN / STAFF
+    // =========================================================
+
+    if (
+      user.role === "ADMIN" ||
+      user.role === "STAFF"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Only customers and vendors can process refunds.",
+        },
+        { status: 403 }
+      );
     }
 
-    if (user.role === "CUSTOMER" && booking.userId !== user.id) {
-      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
-    }
+    // =========================================================
+    // CUSTOMER CANCELLATION
+    // =========================================================
 
-    // Vendor: can only refund bookings for their own hotel, and only when customer has cancelled
-    if (user.role === "VENDOR") {
-      if (booking.hotel.vendorId !== user.id) {
-        return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    if (user.role === "CUSTOMER") {
+      if (booking.userId !== user.id) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "You can only cancel your own booking.",
+          },
+          { status: 403 }
+        );
       }
-      // Vendor can only process refunds on CANCELLED bookings (after customer cancels)
-      if (booking.status !== "CANCELLED") {
-        return NextResponse.json({ success: false, error: `Can only refund CANCELLED bookings. Current status: ${booking.status}` }, { status: 400 });
+
+      if (
+        booking.status !== "PENDING" &&
+        booking.status !== "CONFIRMED"
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Only pending or confirmed bookings can be cancelled.",
+          },
+          { status: 400 }
+        );
       }
-    }
 
-    // Customer refunds happen on PENDING/CONFIRMED (initial cancellation)
-    // Vendor refunds happen on CANCELLED (processing customer's cancellation request)
-    const validStatuses = user.role === "CUSTOMER" ? ["PENDING", "CONFIRMED"] : ["CANCELLED"];
-    if (!validStatuses.includes(booking.status)) {
-      return NextResponse.json({ success: false, error: `Cannot refund a booking with status ${booking.status}` }, { status: 400 });
-    }
+      const policy = getCancellationPolicy(
+        booking.checkIn
+      );
 
-    if (booking.refundStatus !== "NONE" && booking.refundStatus !== null) {
-      return NextResponse.json({ success: false, error: "Refund already processed" }, { status: 409 });
-    }
+      const refundAmount = Math.round(
+        booking.totalPrice *
+          (policy.percent / 100)
+      );
 
-    // Unpaid bookings — cancel with no refund
-    if (!booking.paidAt) {
       await prisma.$transaction([
         prisma.booking.update({
-          where: { id: params.id },
-          data: { status: "CANCELLED", refundStatus: "NOT_ELIGIBLE", refundAmount: 0, refundPercent: 0 },
+          where: {
+            id: booking.id,
+          },
+
+          data: {
+            status: "CANCELLED",
+
+            refundStatus:
+              refundAmount > 0
+                ? "PENDING"
+                : "NOT_ELIGIBLE",
+
+            refundAmount,
+
+            refundPercent: policy.percent,
+          },
         }),
-        prisma.room.update({ where: { id: booking.roomId }, data: { status: "AVAILABLE" } }),
+
+        prisma.room.update({
+          where: {
+            id: booking.roomId,
+          },
+
+          data: {
+            status: "AVAILABLE",
+          },
+        }),
       ]);
+
       return NextResponse.json({
         success: true,
-        refund: { eligible: false, reason: "Booking was not paid — cancelled with no charge." },
+
+        refund: {
+          refundAmount,
+          refundPercent: policy.percent,
+
+          refundStatus:
+            refundAmount > 0
+              ? "PENDING"
+              : "NOT_ELIGIBLE",
+
+          policy: policy.description,
+        },
+
+        message:
+          refundAmount > 0
+            ? "Booking cancelled. Vendor refund pending."
+            : "Booking cancelled. No refund applicable.",
       });
     }
 
-    const policy   = getCancellationPolicy(booking.checkIn);
-    const refundAmt = Math.round(booking.totalPrice * policy.percent / 100);
+    // =========================================================
+    // VENDOR REFUND
+    // =========================================================
 
-    const creditNoteNumber = generateCreditNoteNumber(booking.invoiceNumber!);
-    const now = new Date();
-
-    // Attempt Khalti refund if applicable
-    let khaltiRefundStatus: "SUCCESS" | "PENDING" | "SKIPPED" = "SKIPPED";
-  
-    if (booking.khaltiTransactionId && policy.percent > 0) {
-      try {
-        const isTest  = process.env.KHALTI_SECRET_KEY?.startsWith("test_");
-        const baseUrl = isTest ? "https://a.khalti.com" : "https://khalti.com";
-        const kRes    = await fetch(`${baseUrl}/api/merchant-transaction/${booking.khaltiTransactionId}/refund/`, {
-          method: "POST",
-          headers: { "Authorization": `Key ${process.env.KHALTI_SECRET_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        });
-        const kData = await kRes.json();
-        if (kRes.ok && kData.detail?.includes("successful")) {
-          khaltiRefundStatus = "SUCCESS";
-        } else {
-          khaltiRefundStatus = "PENDING";
-          console.error("[KHALTI_REFUND]", kData);
-        }
-      } catch (err) {
-        khaltiRefundStatus = "PENDING";
-        console.error("[KHALTI_REFUND]", err);
+    if (user.role === "VENDOR") {
+      if (booking.hotel.vendorId !== user.id) {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "You can only refund your own hotel bookings.",
+          },
+          { status: 403 }
+        );
       }
-    } else if (booking.khaltiTransactionId && policy.percent === 0) {
-      khaltiRefundStatus = "SKIPPED"; // no refund applicable
+
+      if (booking.status !== "CANCELLED") {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Only cancelled bookings can be refunded.",
+          },
+          { status: 400 }
+        );
+      }
+
+      // =========================================================
+      // IDEMPOTENT
+      // =========================================================
+
+      if (
+        booking.refundStatus === "COMPLETED"
+      ) {
+        return NextResponse.json({
+          success: true,
+
+          refund: {
+            creditNoteNumber:
+              booking.creditNoteRef,
+
+            refundAmount:
+              booking.refundAmount ?? 0,
+
+            refundPercent:
+              booking.refundPercent ?? 0,
+
+            refundStatus: "COMPLETED",
+
+            policy: `${booking.refundPercent ?? 0}% refund policy`,
+
+            manualProcessingRequired: false,
+          },
+
+          message:
+            "Refund already completed.",
+        });
+      }
+
+      const refundAmount =
+        booking.refundAmount ?? 0;
+
+      const refundPercent =
+        booking.refundPercent ?? 0;
+
+      // =========================================================
+      // NO REFUND ELIGIBLE
+      // =========================================================
+
+      if (refundAmount <= 0) {
+        await prisma.booking.update({
+          where: {
+            id: booking.id,
+          },
+
+          data: {
+            refundStatus: "NOT_ELIGIBLE",
+          },
+        });
+
+        return NextResponse.json({
+          success: true,
+
+          refund: {
+            creditNoteNumber: "N/A",
+            refundAmount: 0,
+            refundPercent: 0,
+            refundStatus: "NOT_ELIGIBLE",
+            policy: "No refund applicable",
+            manualProcessingRequired: false,
+          },
+        });
+      }
+
+      // =========================================================
+      // PAYMENT PROVIDER REFUND
+      // =========================================================
+
+      let providerRefundSuccess = false;
+
+      // =========================================================
+      // STRIPE REFUND
+      // =========================================================
+
+      if (
+        booking.paymentMethod === "STRIPE"
+      ) {
+        try {
+          if (!booking.stripeSessionId) {
+            throw new Error(
+              "Stripe session missing"
+            );
+          }
+
+          const stripe = getStripe();
+
+          const checkoutSession =
+            await stripe.checkout.sessions.retrieve(
+              booking.stripeSessionId
+            );
+
+          const paymentIntentId =
+            typeof checkoutSession.payment_intent ===
+            "string"
+              ? checkoutSession.payment_intent
+              : checkoutSession.payment_intent?.id;
+
+          if (!paymentIntentId) {
+            throw new Error(
+              "Stripe payment intent missing"
+            );
+          }
+
+          await stripe.refunds.create({
+            payment_intent:
+              paymentIntentId,
+
+            amount: Math.round(
+              refundAmount * 100
+            ),
+          });
+
+          providerRefundSuccess = true;
+        } catch (err) {
+          console.error(
+            "[STRIPE_REFUND]",
+            err
+          );
+        }
+      }
+
+      // =========================================================
+      // KHALTI REFUND
+      // =========================================================
+
+      if (
+        booking.paymentMethod === "KHALTI"
+      ) {
+        try {
+          if (!booking.khaltiTransactionId) {
+            throw new Error(
+              "Missing Khalti transaction ID"
+            );
+          }
+
+          const isTest =
+            process.env.KHALTI_SECRET_KEY?.startsWith(
+              "test_"
+            );
+
+          const baseUrl = isTest
+            ? "https://a.khalti.com"
+            : "https://khalti.com";
+
+          const response = await fetch(
+            `${baseUrl}/api/merchant-transaction/${booking.khaltiTransactionId}/refund/`,
+            {
+              method: "POST",
+
+              headers: {
+                Authorization: `Key ${process.env.KHALTI_SECRET_KEY}`,
+                "Content-Type":
+                  "application/json",
+              },
+
+              body: JSON.stringify({}),
+            }
+          );
+
+          providerRefundSuccess =
+            response.ok;
+
+          if (!response.ok) {
+            const err =
+              await response.text();
+
+            console.error(
+              "[KHALTI_REFUND]",
+              err
+            );
+          }
+        } catch (err) {
+          console.error(
+            "[KHALTI_REFUND]",
+            err
+          );
+        }
+      }
+
+      // =========================================================
+      // CASH REFUND
+      // =========================================================
+
+      if (
+        booking.paymentMethod === "CASH"
+      ) {
+        providerRefundSuccess = true;
+      }
+
+      // =========================================================
+      // CREDIT NOTE
+      // =========================================================
+
+      const creditNoteNumber =
+        booking.creditNote?.creditNoteNumber ||
+        generateCreditNoteNumber(
+          booking.invoiceNumber ||
+            booking.id
+        );
+
+      const now = new Date();
+
+      await prisma.$transaction(async (tx) => {
+        if (!booking.creditNote) {
+          await tx.creditNote.create({
+            data: {
+              creditNoteNumber,
+
+              bookingId: booking.id,
+
+              originalInvoice:
+                booking.invoiceNumber ||
+                "N/A",
+
+              guestName:
+                booking.user.name,
+
+              guestEmail:
+                booking.user.email,
+
+              hotelName:
+                booking.hotel.name,
+
+              roomName:
+                booking.room.name,
+
+              originalAmount:
+                booking.totalPrice,
+
+              refundAmount,
+
+              refundPercent,
+
+              reason,
+
+              cancellationPolicy:
+                `${refundPercent}% refund policy`,
+
+              issuedAt: now,
+
+              issuedBy: user.id,
+            },
+          });
+        }
+
+        await tx.booking.update({
+          where: {
+            id: booking.id,
+          },
+
+          data: {
+            refundStatus:
+              providerRefundSuccess
+                ? "COMPLETED"
+                : "PENDING",
+
+            refundedAt:
+              providerRefundSuccess
+                ? now
+                : null,
+
+            paymentStatus:
+              refundAmount >=
+              booking.totalPrice
+                ? "REFUNDED"
+                : "PARTIALLY_REFUNDED",
+
+            creditNoteRef:
+              creditNoteNumber,
+          },
+        });
+      });
+
+      return NextResponse.json({
+        success: true,
+
+        refund: {
+          creditNoteNumber,
+
+          refundAmount,
+
+          refundPercent,
+
+          refundStatus:
+            providerRefundSuccess
+              ? "COMPLETED"
+              : "PENDING",
+
+          policy: `${refundPercent}% refund policy`,
+
+          manualProcessingRequired:
+            !providerRefundSuccess,
+        },
+
+        message:
+          providerRefundSuccess
+            ? `Refund completed successfully.`
+            : "Refund pending provider confirmation.",
+      });
     }
 
-    const refundStatus = khaltiRefundStatus === "SUCCESS" ? "COMPLETED" : "PENDING";
-
-    await prisma.$transaction([
-      prisma.creditNote.create({
-        data: {
-          creditNoteNumber,
-          bookingId:          booking.id,
-          originalInvoice:    booking.invoiceNumber!,
-          guestName:          booking.user.name,
-          guestEmail:         booking.user.email,
-          hotelName:          booking.hotel.name,
-          roomName:           booking.room.name,
-          originalAmount:     booking.totalPrice,
-          refundAmount:       refundAmt,
-          refundPercent:      policy.percent,
-          reason:             reason ?? "Guest cancellation",
-          cancellationPolicy: policy.description,
-          issuedAt:           now,
-          issuedBy:           user.id,
-          notes: khaltiRefundStatus === "PENDING"
-            ? "Khalti refund pending — admin to complete manually"
-            : undefined,
-        },
-      }),
-      prisma.booking.update({
-        where: { id: params.id },
-        data: {
-          status:         "CANCELLED",
-          creditNoteRef:  creditNoteNumber,
-          refundStatus,
-          refundAmount:   refundAmt,
-          refundPercent:  policy.percent,
-          refundedAt:     refundStatus === "COMPLETED" ? now : undefined,
-        },
-      }),
-      prisma.room.update({ where: { id: booking.roomId }, data: { status: "AVAILABLE" } }),
-    ]);
-
-    return NextResponse.json({
-      success: true,
-      refund: {
-        creditNoteNumber,
-        refundAmount:             refundAmt,
-        refundPercent:            policy.percent,
-        refundStatus,
-        policy:                   policy.description,
-        manualProcessingRequired: refundStatus === "PENDING",
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Invalid role",
       },
-      message: refundStatus === "COMPLETED"
-        ? `Refund of NPR ${refundAmt.toLocaleString()} processed. Credit note ${creditNoteNumber} issued.`
-        : `Credit note ${creditNoteNumber} issued. Refund will be processed within 3–5 business days.`,
-    });
+      { status: 403 }
+    );
   } catch (error) {
-    console.error("[REFUND_POST]", error);
-    return NextResponse.json({ success: false, error: "Failed to process refund" }, { status: 500 });
+    console.error(
+      "[BOOKING_REFUND_POST]",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          "Failed to process refund",
+      },
+      { status: 500 }
+    );
   }
 }

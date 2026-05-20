@@ -52,7 +52,12 @@ function RefundModal({ booking, onClose, onConfirm, loading }: {
   const [reason, setReason] = useState("Guest cancellation");
   const daysToCheckIn = Math.ceil((new Date(booking.checkIn).getTime() - Date.now()) / 86400000);
   // Improved refund calculation: ensure minimum refund for any cancellation
-  const pct = daysToCheckIn > 7 ? 100 : daysToCheckIn >= 3 ? 50 : 25;
+  const pct =
+  daysToCheckIn > 7
+    ? 100
+    : daysToCheckIn >= 3
+    ? 50
+    : 25;
   const refundAmt = Math.round(booking.totalPrice * pct / 100);
   const policy = daysToCheckIn > 7 ? "Full refund (>7 days)" : daysToCheckIn >= 3 ? "50% refund (3–7 days)" : "25% refund (<3 days)";
 
@@ -128,47 +133,88 @@ function RefundModal({ booking, onClose, onConfirm, loading }: {
 }
 
 function RefundResultModal({ result, onClose }: { result: RefundResult; onClose: () => void }) {
+  const handleDone = () => {
+    onClose();
+  };
+
+  const isNotEligible = result.refundStatus === "NOT_ELIGIBLE";
+
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={handleDone}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
         <div className="p-6">
           <div className="flex flex-col items-center text-center mb-6">
-            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mb-3">
-              <CheckCircle className="w-7 h-7 text-green-600" />
-            </div>
-            <h2 className="text-xl font-bold text-slate-800">Refund Processed</h2>
-            <p className="text-slate-500 text-sm mt-1">Credit note has been issued</p>
+            {isNotEligible ? (
+              <>
+                <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mb-3">
+                  <AlertCircle className="w-7 h-7 text-slate-600" />
+                </div>
+                <h2 className="text-xl font-bold text-slate-800">Booking Cancelled</h2>
+                <p className="text-slate-500 text-sm mt-1">No refund applicable</p>
+              </>
+            ) : (
+              <>
+                <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mb-3">
+                  <CheckCircle className="w-7 h-7 text-green-600" />
+                </div>
+                <h2 className="text-xl font-bold text-slate-800">✅ Refund Processed Successfully</h2>
+                <p className="text-slate-500 text-sm mt-1">Credit note has been issued to guest</p>
+              </>
+            )}
           </div>
-          <div className="bg-slate-50 rounded-xl p-4 space-y-2 text-sm mb-6">
+
+          <div className={`rounded-xl p-4 space-y-3 text-sm mb-6 border ${
+            isNotEligible 
+              ? "bg-slate-50 border-slate-200" 
+              : "bg-green-50 border-green-200"
+          }`}>
+            {!isNotEligible && (
+              <div className="flex justify-between">
+                <span className="text-slate-600">Credit Note #</span>
+                <span className="font-mono font-bold text-green-700">{result.creditNoteNumber}</span>
+              </div>
+            )}
             <div className="flex justify-between">
-              <span className="text-slate-500">Credit Note</span>
-              <span className="font-mono font-medium text-slate-800">{result.creditNoteNumber}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Refund Amount</span>
-              <span className="font-bold text-green-700">NPR {result.refundAmount.toLocaleString()} ({result.refundPercent}%)</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Status</span>
-              <span className={`font-medium ${result.refundStatus === "COMPLETED" ? "text-green-600" : "text-amber-600"}`}>
-                {result.refundStatus}
+              <span className="text-slate-600">Refund Amount</span>
+              <span className={`font-bold ${isNotEligible ? "text-slate-600" : "text-green-700"}`}>
+                NPR {(result.refundAmount || 0).toLocaleString()} ({result.refundPercent || 0}%)
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Policy</span>
-              <span className="text-slate-600">{result.policy}</span>
+              <span className="text-slate-600">Status</span>
+              <span className={`font-bold ${
+                result.refundStatus === "COMPLETED" 
+                  ? "text-green-600" 
+                  : isNotEligible 
+                  ? "text-slate-600"
+                  : "text-amber-600"
+              }`}>
+                {result.refundStatus === "COMPLETED" ? "✓ Completed" : 
+                 result.refundStatus === "NOT_ELIGIBLE" ? "No Refund" : 
+                 "⏳ Pending (3-5 days)"}
+              </span>
+            </div>
+            <div className="flex justify-between border-t border-gray-200 pt-3">
+              <span className="text-slate-600">Policy</span>
+              <span className="text-slate-700 font-medium text-xs text-right">{result.policy}</span>
             </div>
           </div>
-          {result.manualProcessingRequired && (
+
+          {result.manualProcessingRequired && !isNotEligible && (
             <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-xl border border-amber-200 mb-4">
               <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-amber-600">
-                Refund will be processed manually within 3–5 business days.
+                <strong>Manual Processing Required:</strong> Khalti refund is pending. It will be processed within 3–5 business days.
               </p>
             </div>
           )}
-          <button onClick={onClose}
-            className="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-semibold transition-colors">
+
+          <button onClick={handleDone}
+            className={`w-full py-3 rounded-xl text-sm font-semibold transition-colors ${
+              isNotEligible
+                ? "bg-slate-600 hover:bg-slate-700 text-white"
+                : "bg-green-600 hover:bg-green-700 text-white"
+            }`}>
             Done
           </button>
         </div>
@@ -217,45 +263,40 @@ export default function VendorBookingsPage() {
     if (!refundBooking) return;
     setRefunding(true);
     try {
-      const res  = await fetch(`/api/bookings/${refundBooking.id}/refund`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+      const res = await fetch(`/api/bookings/${refundBooking.id}/refund`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),
       });
       const data = await res.json();
-      if (data.success) {
+      
+      if (data.success && data.refund) {
+        // Close confirmation modal and show result modal
         setRefundBooking(null);
-        setRefundResult(data.refund);
-        fetchBookings();
+        // Use API response directly - now has consistent structure
+        const refundData: RefundResult = {
+          creditNoteNumber: data.refund.creditNoteNumber,
+          refundAmount: data.refund.refundAmount,
+          refundPercent: data.refund.refundPercent,
+          refundStatus: data.refund.refundStatus,
+          policy: data.refund.policy,
+          manualProcessingRequired: data.refund.manualProcessingRequired,
+        };
+        setRefundResult(refundData);
+        // Refresh bookings in background
+        await fetchBookings();;
       } else {
         toastError(data.error ?? "Failed to process refund");
       }
-    } catch {
+    } catch (err) {
+      console.error("[VENDOR_REFUND]", err);
       toastError("Network error processing refund");
     } finally {
       setRefunding(false);
     }
   };
 
-  const markRefundDone = async (bookingId: string) => {
-    setWorking(bookingId);
-    try {
-      const res  = await fetch(`/api/bookings/${bookingId}/refund`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: "Vendor manually completed refund" }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toastSuccess("Refund marked as completed");
-        fetchBookings();
-      } else {
-        toastError(data.error ?? "Failed to mark refund");
-      }
-    } catch {
-      toastError("Network error");
-    } finally {
-      setWorking(null);
-    }
-  };
+ 
 
   const counts = {
     ALL:         bookings.length,
@@ -268,13 +309,15 @@ export default function VendorBookingsPage() {
   // Show "Refund" button only on CANCELLED bookings where refund is pending
   // (i.e., customer cancelled and now vendor needs to process refund)
   const canRefund = (b: Booking) =>
-    b.status === "CANCELLED" &&
-    b.paidAt &&
-    b.refundStatus === "PENDING";
+  b.status === "CANCELLED" &&
+  !!b.paidAt &&
+  (
+    b.refundStatus === "PENDING" ||
+    b.refundStatus === "NONE"
+  );
 
   // Disabled - only vendors process refunds, no admin/staff involvement
-  const canMarkRefundDone = (b: Booking) =>
-    false;
+ 
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -426,7 +469,14 @@ export default function VendorBookingsPage() {
       {refundResult && (
         <RefundResultModal
           result={refundResult}
-          onClose={() => setRefundResult(null)}
+          onClose={() => {
+            setRefundResult(null);
+            toastSuccess(
+  refundResult?.refundStatus === "COMPLETED"
+    ? "Refund completed successfully."
+    : "Refund request submitted."
+);
+          }}
         />
       )}
     </div>

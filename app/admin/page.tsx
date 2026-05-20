@@ -80,7 +80,7 @@ export default function AdminDashboard() {
                 <p className="flex-1 font-semibold text-orange-800 text-sm">
                   {stats.pendingRefunds} refund{stats.pendingRefunds > 1 ? "s" : ""} require manual processing
                 </p>
-                <Link href="/admin/bookings?refundStatus=PENDING"
+                <Link href="/admin/refunds"
                   className="text-xs px-3 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium whitespace-nowrap">
                   Process →
                 </Link>
@@ -166,7 +166,7 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {[
               { href: "/admin/hotels",    icon: Building2,             label: "Hotel Approvals",  sub: `${stats.pendingHotels} pending` },
-              { href: "/admin/bookings",  icon: CalendarCheck,         label: "All Bookings",      sub: `${stats.totalBookings} total` },
+              { href: "/admin/invoices",  icon: FileText,             label: "Cash Invoices",     sub: "Issue payment invoices" },
               { href: "/admin/complaints",icon: MessageSquareWarning,  label: "Complaints",        sub: `${stats.pendingComplaints ?? 0} open` },
               { href: "/admin/fnmis",     icon: Globe,                 label: "FNMIS Reports",     sub: `${stats.fnmisPending} overdue` },
               { href: "/admin/audit",     icon: FileText,              label: "Audit Report",      sub: "IRD-compliant export" },
