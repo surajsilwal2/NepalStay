@@ -309,44 +309,65 @@ export async function POST(
         booking.paymentMethod === "STRIPE"
       ) {
         try {
-          if (!booking.stripeSessionId) {
+          let paymentIntentId: string | undefined;
+
+          // ================== USE STORED PAYMENT INTENT ==================
+          if (booking.stripePaymentIntentId) {
+            paymentIntentId =
+              booking.stripePaymentIntentId;
+
+            console.log(
+              "[STRIPE_REFUND] Using stored paymentIntentId:",
+              paymentIntentId
+            );
+          } else if (booking.stripeSessionId) {
+            // ================== FALLBACK: FETCH FROM SESSION ==================
+            console.log(
+              "[STRIPE_REFUND] Fallback: Fetching from session",
+              booking.stripeSessionId
+            );
+
+            const stripe = getStripe();
+
+            const checkoutSession =
+              await stripe.checkout.sessions.retrieve(
+                booking.stripeSessionId
+              );
+
+            paymentIntentId =
+              typeof checkoutSession.payment_intent ===
+              "string"
+                ? checkoutSession.payment_intent
+                : checkoutSession.payment_intent?.id;
+          }
+
+          if (!paymentIntentId) {
             throw new Error(
-              "Stripe session missing"
+              "Stripe payment intent missing — not stored and could not retrieve from session"
             );
           }
 
           const stripe = getStripe();
 
-          const checkoutSession =
-            await stripe.checkout.sessions.retrieve(
-              booking.stripeSessionId
-            );
+          const refund =
+            await stripe.refunds.create({
+              payment_intent:
+                paymentIntentId,
 
-          const paymentIntentId =
-            typeof checkoutSession.payment_intent ===
-            "string"
-              ? checkoutSession.payment_intent
-              : checkoutSession.payment_intent?.id;
+              amount: Math.round(
+                refundAmount * 100
+              ),
+            });
 
-          if (!paymentIntentId) {
-            throw new Error(
-              "Stripe payment intent missing"
-            );
-          }
-
-          await stripe.refunds.create({
-            payment_intent:
-              paymentIntentId,
-
-            amount: Math.round(
-              refundAmount * 100
-            ),
-          });
+          console.log(
+            "[STRIPE_REFUND] Success. Refund ID:",
+            refund.id
+          );
 
           providerRefundSuccess = true;
         } catch (err) {
           console.error(
-            "[STRIPE_REFUND]",
+            "[STRIPE_REFUND] Failed:",
             err
           );
         }
